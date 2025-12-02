@@ -1,0 +1,85 @@
+--종목 기본정보
+CREATE TABLE STOCK_INFO (
+    STOCK_CODE      VARCHAR2(10) PRIMARY KEY,         -- 005930(종목코드)
+    STOCK_NAME      VARCHAR2(100) NOT NULL,           -- 삼성전자(회사명)
+    MARKET_TYPE     VARCHAR2(20),                     -- KOSPI / KOSDAQ(시장 구분)
+    INDUSTRY        VARCHAR2(100),                    -- 반도체(업종 또는 산업군)
+    PRICE           NUMBER,                           -- 82000(현재 주가)
+    PRICE_CHANGE    NUMBER,                           -- +1200(전일 대비 가격 변화)
+    CHANGE_RATE     NUMBER,                           -- +1.49(전일 대비 등락률 %)
+    MARKET_CAP      VARCHAR2(50),                     -- 490조(시가 총액)
+    UPDATED_AT      DATE DEFAULT SYSDATE --(마지막으로 업데이트된 시간)
+);
+
+--뉴스 + 감성 결과
+CREATE TABLE STOCK_NEWS (
+    NEWS_ID     NUMBER PRIMARY KEY, --(뉴스 고유 id)
+    STOCK_CODE  VARCHAR2(10),                        -- 연관 종목 코드(이 뉴스가 어떤 종목에 대한 뉴스인지 나타내는 코드. STOCK_INFO 테이블의 STOCK_CODE를 참조)
+    TITLE       VARCHAR2(500) NOT NULL, --(뉴스 제목)
+    CONTENT     CLOB NOT NULL, --(뉴스 전체 본문)
+    URL         VARCHAR2(1000) UNIQUE,                -- 중복 방지(뉴스 원본 링크)
+    NEWS_DATE   DATE, --해당 뉴스가 실제로 작성된 날짜
+    CREATED_AT  DATE DEFAULT SYSDATE, --이 뉴스가 크롤링되 DB에 삽입된 시간
+
+    -- 감성 분석 결과
+    SENTIMENT   VARCHAR2(20),                        -- 긍정 / 보통 / 부정 
+    SCORE       NUMBER,                              -- 점수 (50이상-긍정,-49~+49-보통,-50이하-부정)
+    KEYWORDS    VARCHAR2(1000),                      -- "AI, 반도체, 메모리"(뉴스에서 추출한 주요 키워드)
+    UPDATED_AT  DATE, --(감성 분석이 마지막으로 업데이트된 시간)
+
+    CONSTRAINT FK_NEWS_STOCK
+        FOREIGN KEY (STOCK_CODE) REFERENCES STOCK_INFO(STOCK_CODE) --(뉴스는 특정 종목과 연결됨 (1:N 관계))
+);
+
+--유저테이블
+CREATE TABLE USER_INFO (
+    EMAIL              VARCHAR2(200) PRIMARY KEY,     -- 로그인 ID( LOCAL(일반 가입) / 소셜 가입(Google 등) 모두 이메일 기반)
+    FIRST_NAME         VARCHAR2(50), --(이름)
+    LAST_NAME          VARCHAR2(50), --(성)
+    FULL_NAME          VARCHAR2(100), --(전체 이름)
+
+    PASSWORD           VARCHAR2(200), --비밀번호 ( 소셜 로그인 사용자는 NULL 가능.)
+    PROVIDER           VARCHAR2(20) DEFAULT 'LOCAL', --가입 방식('LOCAL' (이메일 가입), 'GOOGLE'...)
+    ROLE               VARCHAR2(20) DEFAULT 'USER', --권한 (USER' 일반 사용자 / 'ADMIN' 관리자)
+
+    CREATED_AT         DATE DEFAULT SYSDATE, --(계정 생성 시간)
+
+    LOGIN_FAIL_COUNT   NUMBER DEFAULT 0, --(로그인 실패 횟수 누적)
+    LOCK_UNTIL         DATE, -- 계정 잠금 해제 시간 (현재시간 < LOCK_UNTIL 이면 로그인 불가)
+
+    RESET_TOKEN        VARCHAR2(200),                  -- 이메일 링크 검증용 토큰(비밀번호 재설정용 토큰)
+    TOKEN_EXPIRE_AT    DATE,                            -- 토큰 만료 시간 (30분 등)
+
+    ACCOUNT_STATUS     VARCHAR2(20) DEFAULT 'ACTIVE', --관리자 정지 기능(ACTIVE / SUSPENDED)
+    SUSPEND_UNTIL      DATE -- 정지 종료 시간
+);
+--뉴스 ID자동증가 시퀀스
+CREATE SEQUENCE STOCK_NEWS_SEQ
+START WITH 1
+INCREMENT BY 1;
+
+--트리거
+CREATE OR REPLACE TRIGGER STOCK_NEWS_TRG
+BEFORE INSERT ON STOCK_NEWS
+FOR EACH ROW
+BEGIN
+    IF :NEW.NEWS_ID IS NULL THEN
+        SELECT STOCK_NEWS_SEQ.NEXTVAL INTO :NEW.NEWS_ID FROM dual;
+    END IF;
+END;
+/
+
+--STOCK_NEWS검색 성능 인덱스
+CREATE INDEX IDX_NEWS_TITLE ON STOCK_NEWS(TITLE);
+CREATE INDEX IDX_NEWS_STOCK_CODE ON STOCK_NEWS(STOCK_CODE);
+
+-- STOCK_INFO 자동완성용 인덱스
+CREATE INDEX IDX_STOCK_NAME ON STOCK_INFO(STOCK_NAME);
+
+--USER_INFO에서 PROVIDER + PASSWORD
+ALTER TABLE USER_INFO
+ADD CONSTRAINT CK_PASSWORD_PROVIDER CHECK (
+    (PROVIDER = 'LOCAL' AND PASSWORD IS NOT NULL)
+    OR
+    (PROVIDER != 'LOCAL')
+);
