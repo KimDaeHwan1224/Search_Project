@@ -27,18 +27,38 @@ public class StockNewsServiceImpl implements StockNewsService {
 
         Map<String, Object> result = stockNewsDAO.getSentimentSummary(stockCode);
 
-        SentimentSummaryDTO dto = new SentimentSummaryDTO();
-        dto.setPositiveCount(((Number) result.get("POSITIVE")).intValue());
-        dto.setNegativeCount(((Number) result.get("NEGATIVE")).intValue());
-        dto.setNeutralCount(((Number) result.get("NEUTRAL")).intValue());
+        // 결과가 없으면 기본값 반환
+        if (result == null) {
+            return new SentimentSummaryDTO(0, 0, 0, 0.0, 0.0, 0);
+        }
 
-        int total = dto.getPositiveCount() + dto.getNegativeCount() + dto.getNeutralCount();
+        // 안전한 값 추출
+        int positive = getNumber(result.get("POSITIVE"));
+        int negative = getNumber(result.get("NEGATIVE"));
+        int neutral = getNumber(result.get("NEUTRAL"));
+
+        SentimentSummaryDTO dto = new SentimentSummaryDTO();
+        dto.setPositiveCount(positive);
+        dto.setNegativeCount(negative);
+        dto.setNeutralCount(neutral);
+
+        int total = positive + negative + neutral;
 
         if (total > 0) {
-            dto.setPositiveRate(dto.getPositiveCount() * 100.0 / total);
-            dto.setNegativeRate(dto.getNegativeCount() * 100.0 / total);
+            dto.setPositiveRate(positive * 100.0 / total);
+            dto.setNegativeRate(negative * 100.0 / total);
+        } else {
+            dto.setPositiveRate(0);
+            dto.setNegativeRate(0);
         }
 
         return dto;
     }
+
+    // ★ 안전한 숫자 변환 함수
+    private int getNumber(Object val) {
+        if (val == null) return 0;
+        return ((Number) val).intValue();
+    }
+
 }
