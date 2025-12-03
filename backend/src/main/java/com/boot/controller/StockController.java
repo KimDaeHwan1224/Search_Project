@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 /*
  * 검색 + 상세
  * */
+@CrossOrigin(origins = "http://localhost:5173")
 public class StockController {
 
     private final StockInfoService stockInfoService;
