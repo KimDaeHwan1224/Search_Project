@@ -9,4 +9,6 @@ public interface StockService {
     void insertStockNews(StockNewsDTO dto);
 
     List<StockInfoDTO> selectTop100MarketCap();
+    dxq
+    6165
 }
