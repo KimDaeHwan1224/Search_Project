@@ -2,6 +2,7 @@ package com.boot.service;
 
 import com.boot.dao.UserDAO;
 import com.boot.dto.LoginRequestDTO;
+import com.boot.dto.PasswordResetConfirmDTO;
 import com.boot.dto.RegisterRequestDTO;
 import com.boot.dto.UserInfoDTO;
 import com.boot.security.JwtProvider;
@@ -167,4 +168,67 @@ public class AuthService {
         return ResponseEntity.ok("🎉 이메일 인증이 완료되었습니다! 로그인할 수 있습니다.");
     }
     
+ // 5-1) 비밀번호 재설정 요청
+    public ResponseEntity<?> requestPasswordReset(String email) {
+
+        UserInfoDTO user = userDAO.findByEmail(email);
+        if (user == null) {
+            return ResponseEntity.status(404).body("해당 이메일의 계정을 찾을 수 없습니다.");
+        }
+
+        // 토큰 발급 + 만료시간 30분
+        String token = UUID.randomUUID().toString();
+        LocalDateTime expireAt = LocalDateTime.now().plusMinutes(30);
+
+        userDAO.updateResetToken(
+                email,
+                token,
+                expireAt.format(DT_FORMAT)
+        );
+
+        // 실제 서비스에서는 이메일 발송
+        // 개발 중에는 token을 응답으로 내려서 Postman 테스트 가능하도록 함
+        return ResponseEntity.ok("비밀번호 재설정 토큰이 발급되었습니다. (dev token: " + token + ")");
+    }
+
+
+
+    // 5-2) 토큰 유효성 검증
+    public ResponseEntity<?> verifyResetToken(String token) {
+
+        UserInfoDTO user = userDAO.findByToken(token);
+        if (user == null) {
+            return ResponseEntity.status(400).body("유효하지 않은 토큰입니다.");
+        }
+
+        LocalDateTime expireAt = LocalDateTime.parse(user.getTokenExpireAt(), DT_FORMAT);
+        if (expireAt.isBefore(LocalDateTime.now())) {
+            return ResponseEntity.status(400).body("토큰이 만료되었습니다.");
+        }
+
+        return ResponseEntity.ok("토큰이 유효합니다. 비밀번호를 재설정하세요.");
+    }
+
+
+
+    // 5-3) 새 비밀번호 저장
+    public ResponseEntity<?> resetPassword(PasswordResetConfirmDTO req) {
+
+        UserInfoDTO user = userDAO.findByToken(req.getToken());
+        if (user == null) {
+            return ResponseEntity.status(400).body("유효하지 않은 토큰입니다.");
+        }
+
+        LocalDateTime expireAt = LocalDateTime.parse(user.getTokenExpireAt(), DT_FORMAT);
+        if (expireAt.isBefore(LocalDateTime.now())) {
+            return ResponseEntity.status(400).body("토큰이 만료되었습니다.");
+        }
+
+        // 새 비밀번호 암호화 후 저장
+        String encodedPw = passwordEncoder.encode(req.getNewPassword());
+
+        userDAO.updatePasswordAndClearToken(user.getEmail(), encodedPw);
+
+        return ResponseEntity.ok("비밀번호가 성공적으로 변경되었습니다.");
+    }
 }

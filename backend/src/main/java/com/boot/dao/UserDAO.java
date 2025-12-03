@@ -34,4 +34,16 @@ public interface UserDAO {
     UserInfoDTO findByToken(String token);
 
     void activateUser(String email);
+    
+    //비밀번호 재설정
+    int updateResetToken(
+            @Param("email") String email,
+            @Param("resetToken") String resetToken,
+            @Param("tokenExpireAt") String tokenExpireAt
+    );
+
+    int updatePasswordAndClearToken(
+            @Param("email") String email,
+            @Param("password") String newPassword
+    );
 }

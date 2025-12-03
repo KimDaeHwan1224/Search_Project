@@ -136,4 +136,24 @@
 	        TOKEN_EXPIRE_AT = NULL
 	    WHERE EMAIL = #{email}
 	</update>
+	
+	<!-- 비밀번호 재설정용 토큰 업데이트 -->
+	<update id="updateResetToken">
+	    UPDATE USER_INFO
+	    SET RESET_TOKEN = #{resetToken},
+	        TOKEN_EXPIRE_AT = TO_DATE(#{tokenExpireAt}, 'YYYY-MM-DD HH24:MI:SS')
+	    WHERE EMAIL = #{email}
+	</update>
+	
+	
+	<!-- 새 비밀번호 저장 + 토큰 삭제 -->
+	<update id="updatePasswordAndClearToken">
+	    UPDATE USER_INFO
+	    SET 
+	        PASSWORD = #{password},
+	        RESET_TOKEN = NULL,
+	        TOKEN_EXPIRE_AT = NULL
+	    WHERE EMAIL = #{email}
+	</update>
+
 </mapper>
