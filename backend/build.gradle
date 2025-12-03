@@ -51,3 +51,8 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+tasks.withType(ProcessResources).configureEach {
+    from("src/main/resources/mybatis.mappers") {
+        into "mybatis.mappers"
+    }
+}
