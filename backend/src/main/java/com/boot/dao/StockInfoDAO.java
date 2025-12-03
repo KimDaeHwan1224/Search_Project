@@ -11,4 +11,6 @@ public interface StockInfoDAO {
     List<StockInfoDTO> searchStocks(String keyword);
 
     StockInfoDTO getStockDetail(String stockCode);
+
+    List<StockInfoDTO> selectTop100MarketCap();
 }
