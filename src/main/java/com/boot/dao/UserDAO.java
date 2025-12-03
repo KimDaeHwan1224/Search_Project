@@ -30,4 +30,8 @@ public interface UserDAO {
             @Param("tokenExpireAt") String tokenExpireAt
     );
 
+    //이메일 인증
+    UserInfoDTO findByToken(String token);
+
+    void activateUser(String email);
 }
