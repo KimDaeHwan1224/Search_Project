@@ -3,7 +3,7 @@ package com.boot.dto;
 import lombok.Data;
 
 @Data
-public class RegisterRequest {
+public class RegisterRequestDTO {
 
     private String email;
     private String firstName;

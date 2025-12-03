@@ -1,7 +1,7 @@
 package com.boot.controller;
 
 import com.boot.dto.LoginRequestDTO;
-import com.boot.dto.RegisterRequest;
+import com.boot.dto.RegisterRequestDTO;
 import com.boot.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -27,7 +27,11 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody RegisterRequest req) {
+    public ResponseEntity<?> register(@RequestBody RegisterRequestDTO req) {
         return authService.register(req);
+    }
+    @GetMapping("/verify")
+    public ResponseEntity<?> verifyEmail(@RequestParam String token) {
+        return authService.verifyEmail(token);
     }
 }
