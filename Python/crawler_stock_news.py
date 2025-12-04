@@ -11,7 +11,7 @@ import oracledb
 # ===============================
 DB_USER = "opendata_user"
 DB_PASSWORD = "opendata123"
-DB_DSN = "localhost:1521/XE"
+DB_DSN = "192.168.10.34:1521/XE"
 
 # ===============================
 # 네이버 뉴스 URL
@@ -471,4 +471,5 @@ def main():
             print("\nDB 연결 종료")
 
 if __name__ == "__main__":
+
     main()
