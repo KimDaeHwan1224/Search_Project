@@ -309,30 +309,33 @@ public class AuthService {
     //소셜로그인
     public ResponseEntity<?> socialLogin(SocialUserInfoDTO social) {
 
-        // 1) 기존 회원 조회
+        // 1) 이메일로 기존 회원 조회
         UserInfoDTO user = userDAO.findByEmail(social.getEmail());
 
+        // 2) 없으면 신규 소셜 회원으로 INSERT
         if (user == null) {
-            // 2) 신규 소셜 회원 등록
-            String fullName = social.getFullName();
             userDAO.insertSocialUser(
                     social.getEmail(),
-                    fullName,
+                    social.getFullName(),
                     social.getProvider()
             );
-
-            // 다시 조회
             user = userDAO.findByEmail(social.getEmail());
         }
 
-        // 3) 토큰 생성
+        // 3) 계정 상태 체크 (정지 등 필요하면 여기서)
+        if (!"ACTIVE".equals(user.getAccountStatus())) {
+            return ResponseEntity.status(403)
+                    .body("❌ 사용이 제한된 계정입니다.");
+        }
+
+        // 4) JWT Access / Refresh 발급
         String accessToken = jwtProvider.createAccessToken(user.getEmail());
         String refreshToken = jwtProvider.createRefreshToken(user.getEmail());
 
-        // 4) Refresh Token DB 저장
+        // 5) Refresh 토큰 DB 저장
         userDAO.updateRefreshToken(user.getEmail(), refreshToken);
 
-        // 5) 프론트로 내려줄 사용자 정보 구성
+        // 6) 화면으로 내려줄 사용자 정보
         LoginUserInfoDTO userInfo = new LoginUserInfoDTO(
                 user.getEmail(),
                 user.getFullName(),
@@ -342,7 +345,11 @@ public class AuthService {
                 user.getAccountStatus()
         );
 
-        LoginResponseDTO response = new LoginResponseDTO(accessToken, refreshToken, userInfo);
+        LoginResponseDTO response = new LoginResponseDTO(
+                accessToken,
+                refreshToken,
+                userInfo
+        );
 
         return ResponseEntity.ok(response);
     }

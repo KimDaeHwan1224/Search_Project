@@ -54,6 +54,9 @@ public interface UserDAO {
     UserInfoDTO findByRefreshToken(String refreshToken);
     void deleteRefreshToken(String email);
     
-    //소셜로그인
-    void insertSocialUser(String email, String fullName, String provider);
+    //소셜로그인 신규 유저용
+    void insertSocialUser(
+    		@Param("email") String email,
+            @Param("fullName") String fullName,
+            @Param("provider") String provider);
 }

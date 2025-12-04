@@ -5,7 +5,10 @@ import com.boot.dto.PasswordResetConfirmDTO;
 import com.boot.dto.PasswordResetRequestDTO;
 import com.boot.dto.RefreshRequestDTO;
 import com.boot.dto.RegisterRequestDTO;
+import com.boot.dto.SocialUserInfoDTO;
 import com.boot.service.AuthService;
+import com.boot.service.KakaoOAuthService;
+
 import lombok.RequiredArgsConstructor;
 
 import java.util.Map;
@@ -18,7 +21,8 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final AuthService authService;
+	private final AuthService authService;
+	private final KakaoOAuthService kakaoOAuthService;
 
     // 로그인 요청 처리
     @PostMapping("/login")
@@ -68,5 +72,14 @@ public class AuthController {
     public ResponseEntity<?> logout(@RequestBody Map<String, String> req) {
         String email = req.get("email");
         return authService.logout(email);
+    }
+    
+    //카카오 로그인
+    @GetMapping("/kakao/callback")
+    public ResponseEntity<?> kakaoCallback(@RequestParam String code) {
+
+        SocialUserInfoDTO social = kakaoOAuthService.getUserInfo(code);
+
+        return authService.socialLogin(social);
     }
 }
