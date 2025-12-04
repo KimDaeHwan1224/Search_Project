@@ -24,15 +24,18 @@ import java.time.Duration;
 @RequiredArgsConstructor
 public class AuthService {
 
+    private final MailService mailService;
+
     private final UserDAO userDAO;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
-
+    
     // 최대 실패 횟수 및 잠금 시간(초)
     private final int MAX_FAIL = 5;
     private final int LOCK_TIME = 30;
 
     private static final DateTimeFormatter DT_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
     public ResponseEntity<?> login(LoginRequestDTO req) {
 
     	UserInfoDTO user = userDAO.findByEmail(req.getEmail());
@@ -141,7 +144,7 @@ public class AuthService {
                 token,
                 expireAtStr
         );
-
+        mailService.sendVerificationMail(req.getEmail(), token);
         // 6) 응답
         return ResponseEntity.ok("회원가입 완료! 이메일 인증을 진행해주세요.");
     }
