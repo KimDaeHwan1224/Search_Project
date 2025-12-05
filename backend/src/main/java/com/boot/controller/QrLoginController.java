@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 
@@ -65,20 +66,15 @@ public class QrLoginController {
     @PostMapping("/approve")
     public ResponseEntity<?> approveQr(
             @RequestBody Map<String, String> req,
-            @AuthenticationPrincipal LoginUserInfoDTO user // 모바일 로그인 정보
+            @AuthenticationPrincipal UserDetails user
     ) {
-
-        if (user == null) {
-            return ResponseEntity.status(401).body("로그인이 필요한 기능입니다.");
-        }
+        if (user == null) return ResponseEntity.status(401).body("로그인이 필요한 기능입니다.");
 
         String sessionId = req.get("sessionId");
-
-        qrService.approveSession(sessionId, user.getEmail(), user.getProvider());
+        qrService.approveSession(sessionId, user.getUsername(), "LOCAL");
 
         return ResponseEntity.ok("QR 로그인 승인 완료");
     }
-
 
     /**
      * 4) PC에서 QR 상태 조회 (폴링)

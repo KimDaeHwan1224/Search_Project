@@ -23,9 +23,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     // SecurityConfig와 맞춘 화이트리스트 URL
     private static final List<String> WHITE_LIST = List.of(
-            "/auth/",
-            "/api/stocks/",
-            "/api/news/",
+            "/auth/login",
+            "/auth/register",
+            "/auth/verify",
+            "/auth/check-email",
+            "/auth/reset/request",
+            "/auth/reset/verify",
+            "/auth/reset/confirm",
+            "/auth/kakao",
+            "/auth/kakao/callback",
+            "/auth/naver/callback",
+            "/auth/google/callback",
+            "/auth/qr/create",  // QR 생성은 인증 불필요
+            "/auth/qr/status",
             "/error"
     );
 
@@ -33,7 +43,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
-        return WHITE_LIST.stream().anyMatch(path::startsWith);
+        return WHITE_LIST.contains(path);  // 완전 일치만 허용
     }
     
     // 요청이 들어올 때마다 JWT를 검사하는 필터
