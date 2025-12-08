@@ -233,7 +233,7 @@ function Header() {
               {/* 드롭다운 메뉴 */}
               {isDropdownOpen && (
                 <DropdownMenu>
-                  <DropdownItem onClick={() => navigate('/dashboard')}>
+                  <DropdownItem onClick={() => navigate('/mypage')}>
                     마이페이지
                   </DropdownItem>
                   <DropdownItem onClick={() => navigate('/find-pw')}>

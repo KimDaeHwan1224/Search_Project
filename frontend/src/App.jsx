@@ -26,6 +26,7 @@ import FindPasswordPage from './pages/FindPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 
 import SocialLoginCallback from './pages/SocialLoginCallback';
+import MyPage from './pages/MyPage';
 
 function App() {
   return (
@@ -41,7 +42,7 @@ function App() {
             <Route path="trend" element={<KeywordTrendPage />} />
             <Route path="marketcap" element={<MarketCapPage />} />
             <Route path="favorites" element={<FavoritesPage />} /> {/* ⬅️ FavoritesPage 라우트 */}
-            <Route path="mypage" element="<MyPage />" /> {/* ⬅️ MyPage 라우트 */}
+            <Route path="mypage" element={<MyPage />} />
             <Route path="login" element={<LoginPage />} />
             <Route path="signup" element={<Signup />} />
             <Route path="findpw" element={<FindPw />} />

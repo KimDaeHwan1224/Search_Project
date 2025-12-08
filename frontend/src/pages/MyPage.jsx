@@ -1,161 +1,149 @@
-// src/pages/MyPage.jsx
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-import React, { useState, useEffect } from 'react';
-import styled from 'styled-components';
-import axios from 'axios';
-import { useAuth } from '../context/AuthContext'; // 🚨 로그인 상태 Hook 임포트 필요
-
-// -----------------------------------------------------
-// 1. Styled Components 정의
-// -----------------------------------------------------
-
-const MyPageContainer = styled.div`
-    padding: 20px 0;
-    max-width: 600px;
-    margin: 0 auto;
-`;
-
-const Title = styled.h1`
-    font-size: 24px;
-    font-weight: 600;
-    margin-bottom: 25px;
-    border-bottom: 1px solid var(--border-light);
-    padding-bottom: 10px;
-`;
-
-const FormCard = styled.div`
-    background-color: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-    padding: 30px;
-    margin-bottom: 30px;
-`;
-
-const InputGroup = styled.div`
-    margin-bottom: 20px;
-    label {
-        display: block;
-        margin-bottom: 5px;
-        font-weight: 500;
-        color: var(--text-dark);
-    }
-    input {
-        width: 100%;
-        padding: 10px;
-        border: 1px solid var(--border-light);
-        border-radius: 5px;
-    }
-`;
-
-const ButtonGroup = styled.div`
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 20px;
-`;
-
-const DangerButton = styled.button`
-    background-color: #dc3545;
-    &:hover {
-        background-color: #c82333;
-    }
-`;
-
-
-// -----------------------------------------------------
-// 2. MyPage 컴포넌트 정의
-// -----------------------------------------------------
+// 스타일 객체
+const styles = {
+  container: {
+    maxWidth: '800px',
+    margin: '50px auto',
+    padding: '20px',
+    fontFamily: 'sans-serif',
+  },
+  title: {
+    color: '#333',
+    borderBottom: '2px solid #eee',
+    paddingBottom: '15px',
+    marginBottom: '30px',
+    fontSize: '2em',
+    fontWeight: 'bold',
+  },
+  card: {
+    background: 'white',
+    borderRadius: '12px',
+    boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+    padding: '30px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '20px',
+    border: '1px solid #eee',
+  },
+  avatar: {
+    width: '80px',
+    height: '80px',
+    backgroundColor: '#007bff',
+    color: 'white',
+    borderRadius: '50%',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    fontSize: '32px',
+    fontWeight: 'bold',
+    flexShrink: 0,
+  },
+  info: {
+    flex: 1,
+  },
+  infoH2: {
+    margin: '0 0 5px 0',
+    fontSize: '24px',
+    color: '#333',
+  },
+  infoP: {
+    margin: '0',
+    color: '#666',
+  },
+  badge: {
+    display: 'inline-block',
+    padding: '4px 8px',
+    borderRadius: '4px',
+    background: '#eee',
+    fontSize: '12px',
+    marginTop: '8px',
+    fontWeight: 'bold',
+    color: '#555',
+  },
+  buttonGroup: {
+    display: 'flex',
+    gap: '10px',
+  },
+  button: {
+    padding: '10px 20px',
+    border: '1px solid #ddd',
+    background: 'white',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: 'bold',
+    fontSize: '14px',
+    color: '#333',
+  },
+  section: {
+    marginTop: '30px',
+  },
+  sectionTitle: {
+    fontSize: '1.5em',
+    fontWeight: 'bold',
+    marginBottom: '15px',
+  },
+  emptyBox: {
+    color: '#888',
+    padding: '20px',
+    background: '#f9f9f9',
+    borderRadius: '8px',
+    textAlign: 'center',
+  }
+};
 
 function MyPage() {
-    // 🚨 useAuth Hook이 없거나 import되지 않았다면 이 부분에서 오류 발생 가능성이 높습니다.
-    // const { user, logout } = useAuth(); 
-    
-    // 임시 사용자 데이터
-    const [formData, setFormData] = useState({
-        username: 'korea_user',
-        email: 'user@kstock.com',
-        // password는 보안상 가져오지 않습니다.
-    });
-    
-    const [isEditing, setIsEditing] = useState(false);
+  const navigate = useNavigate();
+  const [user, setUser] = useState(null);
 
-    const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (!storedUser) {
+      alert("로그인이 필요한 페이지입니다.");
+      navigate('/');
+      return;
+    }
+    setUser(JSON.parse(storedUser));
+  }, [navigate]);
 
-    const handleUpdate = async () => {
-        // 🚨 스프링 부트 API 호출
-        // try {
-        //     await axios.put('http://localhost:8484/api/user/update', formData);
-        //     alert('정보가 성공적으로 수정되었습니다.');
-        //     setIsEditing(false);
-        // } catch (error) {
-        //     alert('정보 수정에 실패했습니다.');
-        // }
-        alert('정보 수정 API 호출 (더미): ' + JSON.stringify(formData));
-        setIsEditing(false);
-    };
+  if (!user) return null;
 
-    const handleWithdrawal = () => {
-        if (window.confirm("정말로 회원 탈퇴를 진행하시겠습니까? 이 작업은 되돌릴 수 없습니다.")) {
-            // 🚨 스프링 부트 API 호출
-            // axios.delete('http://localhost:8484/api/user/withdraw').then(logout);
-            alert('회원 탈퇴 API 호출 (더미): 로그아웃 처리');
-            // logout(); // useAuth의 logout 함수 호출
-        }
-    };
+  return (
+    <div style={styles.container}>
+      <h1 style={styles.title}>마이페이지</h1>
 
-    return (
-        <MyPageContainer>
-            <Title>내 정보 확인 및 수정</Title>
-            
-            <FormCard>
-                <h2>사용자 정보</h2>
-                
-                <InputGroup>
-                    <label>아이디 (Username)</label>
-                    <input 
-                        type="text" 
-                        name="username" 
-                        value={formData.username}
-                        onChange={handleChange}
-                        disabled={!isEditing}
-                    />
-                </InputGroup>
+      <div style={styles.card}>
+        <div style={styles.avatar}>
+          {user.fullName ? user.fullName.charAt(0) : 'U'}
+        </div>
+        
+        <div style={styles.info}>
+          <h2 style={styles.infoH2}>{user.fullName || '회원'}님</h2>
+          <p style={styles.infoP}>{user.email}</p>
+          {user.provider && (
+            <span style={styles.badge}>{user.provider} 로그인</span>
+          )}
+        </div>
 
-                <InputGroup>
-                    <label>이메일</label>
-                    <input 
-                        type="email" 
-                        name="email" 
-                        value={formData.email}
-                        onChange={handleChange}
-                        disabled={!isEditing}
-                    />
-                </InputGroup>
-                
-                <ButtonGroup>
-                    {isEditing ? (
-                        <>
-                            <button onClick={handleUpdate}>저장</button>
-                            <button onClick={() => setIsEditing(false)} style={{backgroundColor: '#6c757d'}}>취소</button>
-                        </>
-                    ) : (
-                        <button onClick={() => setIsEditing(true)}>정보 수정</button>
-                    )}
-                </ButtonGroup>
-            </FormCard>
-            
-            <FormCard style={{borderColor: '#dc3545', borderLeft: '5px solid #dc3545'}}>
-                <h2>회원 탈퇴</h2>
-                <p className="text-gray">더 이상 서비스를 이용하지 않으려면 회원 탈퇴를 진행할 수 있습니다. 탈퇴 후 모든 정보는 삭제됩니다.</p>
-                <ButtonGroup>
-                    <DangerButton onClick={handleWithdrawal}>회원 탈퇴</DangerButton>
-                </ButtonGroup>
-            </FormCard>
+        <div style={styles.buttonGroup}>
+           <button 
+             style={styles.button}
+             onClick={() => alert('준비 중인 기능입니다.')}
+           >
+             내 정보 수정
+           </button>
+        </div>
+      </div>
 
-        </MyPageContainer>
-    );
+      <div style={styles.section}>
+        <h3 style={styles.sectionTitle}>⭐ 관심 종목</h3>
+        <div style={styles.emptyBox}>
+            아직 관심 종목이 없습니다.
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default MyPage;
