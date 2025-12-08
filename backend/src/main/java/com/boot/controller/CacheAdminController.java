@@ -20,8 +20,8 @@ public class CacheAdminController {
     @PostMapping("/clear-all")
     public ResponseEntity<String> clearAllCaches() {
         try {
-            cacheEvictService.clearKospiCache();
-            cacheEvictService.clearKosdaqCache();
+            cacheEvictService.evictKospiHistoryCache();
+            cacheEvictService.evictKosdaqHistoryCache();
             return ResponseEntity.ok("All Index Caches Cleared Successfully.");
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Cache Clear Failed: " + e.getMessage());

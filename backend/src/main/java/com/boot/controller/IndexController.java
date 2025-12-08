@@ -1,6 +1,7 @@
 package com.boot.controller;
 
 import com.boot.dto.IndexDataDTO;
+import com.boot.service.IndexReadService;
 import com.boot.service.IndexService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -13,7 +14,7 @@ import java.util.List;
 public class IndexController {
 
     @Autowired
-    private IndexService indexService;
+    private IndexReadService indexService;
 
     @GetMapping("/kospi-history")
     public ResponseEntity<List<IndexDataDTO>> getKospiHistory() {

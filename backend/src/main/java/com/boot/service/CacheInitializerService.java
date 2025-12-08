@@ -20,8 +20,8 @@ public class CacheInitializerService {
         System.out.println("AUTO INIT: CacheInitializerService 실행 - 캐시 강제 무효화 시작");
         try {
             // IndexService의 데이터 수집/업데이트가 완료되었다고 가정하고 캐시 삭제를 실행합니다.
-            cacheEvictService.clearKospiCache();
-            cacheEvictService.clearKosdaqCache();
+            cacheEvictService.evictKospiHistoryCache();
+            cacheEvictService.evictKosdaqHistoryCache();
             System.out.println("AUTO INIT: 모든 캐시 초기화 완료.");
         } catch (Exception e) {
             System.err.println("AUTO INIT: 캐시 초기화 중 오류 발생 (Redis 서버 확인 필요): " + e.getMessage());
