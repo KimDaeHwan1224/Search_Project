@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 
-// 스타일 객체 정의 (styled-components 대체)
+// 스타일 객체 정의
 const styles = {
   container: {
     maxWidth: '1000px',
@@ -148,27 +148,37 @@ function StockDetailPage() {
 
   const { stockInfo, newsList, sentiment } = data;
 
-  // 등락에 따른 색상 및 기호 결정 로직
-  const isRising = stockInfo.priceChange > 0;
-  const isFalling = stockInfo.priceChange < 0;
+  // ⭐ [수정] 등락 로직 강화
+  // priceChange가 0이어도, changeRate(%)가 있으면 상승/하락으로 판정합니다.
+  const changeRate = stockInfo.changeRate || 0;
+  const priceChange = stockInfo.priceChange || 0;
+
+  // 둘 중 하나라도 양수면 상승, 음수면 하락
+  const isRising = changeRate > 0 || priceChange > 0;
+  const isFalling = changeRate < 0 || priceChange < 0;
+
+  // 색상 및 기호 결정
   const priceColor = isRising ? '#d60000' : isFalling ? '#0051c7' : '#333';
   const priceSign = isRising ? '▲' : isFalling ? '▼' : '-';
 
   return (
     <div style={styles.container}>
-      {/* 1. 헤더 정보 (이름, 가격, 등락폭) */}
+      {/* 1. 헤더 정보 */}
       <div style={styles.header}>
         <h1 style={styles.stockTitle}>
           {stockInfo.stockName} <span style={styles.stockCode}>{stockInfo.stockCode}</span>
         </h1>
         
         <div style={styles.priceContainer}>
+          {/* ⭐ [적용] 가격에도 색상 적용 */}
           <div style={{ ...styles.price, color: priceColor }}>
-            {stockInfo.price.toLocaleString()}원
+            {stockInfo.price ? stockInfo.price.toLocaleString() : 0}원
           </div>
+          
+          {/* ⭐ [적용] 등락폭 및 등락률 표시 */}
           <div style={{ ...styles.changeInfo, color: priceColor }}>
-            {priceSign} {Math.abs(stockInfo.priceChange).toLocaleString()} 
-            ({stockInfo.changeRate}%)
+            {priceSign} {Math.abs(priceChange).toLocaleString()} 
+            <span style={{ marginLeft: '5px' }}>({changeRate}%)</span>
           </div>
         </div>
 
@@ -184,7 +194,6 @@ function StockDetailPage() {
       <div style={styles.section}>
         <h3 style={styles.sectionTitle}>🤖 AI 뉴스 감성 분석</h3>
         <div style={styles.sentimentBarContainer}>
-            {/* 간단한 바 차트 시각화 */}
             <div style={styles.barWrapper}>
                 <div style={{ width: `${sentiment?.positiveRate}%`, backgroundColor: '#d60000' }} />
                 <div style={{ width: `${sentiment?.neutralRate}%`, backgroundColor: '#999' }} />
@@ -210,7 +219,6 @@ function StockDetailPage() {
                     </a>
                     <div style={styles.newsSummary}>{news.content}</div>
                     <div style={styles.newsInfo}>
-                        {/* 감성 뱃지 표시 */}
                         <span style={{ 
                             ...styles.sentimentBadge, 
                             color: news.sentiment === '긍정' ? '#d60000' : news.sentiment === '부정' ? '#0051c7' : '#666' 
