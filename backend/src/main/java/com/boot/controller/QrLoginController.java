@@ -33,7 +33,8 @@ public class QrLoginController {
         String sessionId = qrService.createSession();
 
         // QR로 인코딩할 URL
-        String qrUrl = "http://localhost:8484/auth/qr/check?sessionId=" + sessionId;
+//        String qrUrl = "http://localhost:8484/auth/qr/check?sessionId=" + sessionId;
+        String qrUrl = "http://localhost:5173/mobile-approve?sessionId=" + sessionId;
 
         return ResponseEntity.ok(Map.of(
                 "sessionId", sessionId,
@@ -51,7 +52,8 @@ public class QrLoginController {
     @GetMapping(value = "/image", produces = MediaType.IMAGE_PNG_VALUE)
     public ResponseEntity<byte[]> getQrImage(@RequestParam String sessionId) throws Exception {
 
-        String qrUrl = "http://192.168.10.56:8484/auth/qr/check?sessionId=" + sessionId;
+//        String qrUrl = "http://192.168.10.56:8484/auth/qr/check?sessionId=" + sessionId;
+        String qrUrl = "http://localhost:5173/mobile-approve?sessionId=" + sessionId;
         
         byte[] qrImage = qrService.generateQr(qrUrl);
 

@@ -27,6 +27,7 @@ import ResetPasswordPage from './pages/ResetPasswordPage';
 
 import SocialLoginCallback from './pages/SocialLoginCallback';
 import MyPage from './pages/MyPage';
+import MobileApprovePage from './pages/MobileApprovePage';
 
 function App() {
   return (
@@ -54,6 +55,7 @@ function App() {
             <Route path="oauth/callback/kakao" element={<SocialLoginCallback provider="kakao" />} />
             <Route path="oauth/callback/naver" element={<SocialLoginCallback provider="naver" />} />
             <Route path="oauth/callback/google" element={<SocialLoginCallback provider="google" />} />
+            <Route path="mobile-approve" element={<MobileApprovePage />} />
           </Route>
         </Routes>
       </AuthProvider>

@@ -4,12 +4,15 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 // ==========================================
-// 1. 스타일 컴포넌트 정의
+// 1. 스타일 컴포넌트 정의 (디자인 영역 - 전체 포함)
 // ==========================================
 
 const ModalOverlay = styled.div`
   position: fixed;
-  top: 0; left: 0; width: 100%; height: 100%;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
@@ -33,9 +36,13 @@ const ModalContent = styled.div`
 
 const CloseButton = styled.button`
   position: absolute;
-  top: 15px; right: 15px;
-  background: none; border: none;
-  font-size: 20px; cursor: pointer; color: #666;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #666;
 `;
 
 const Title = styled.h2`
@@ -45,17 +52,27 @@ const Title = styled.h2`
 `;
 
 const Input = styled.input`
-  width: 100%; padding: 12px; margin-bottom: 15px;
-  border: 1px solid #ddd; border-radius: 4px;
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 15px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
   box-sizing: border-box;
 `;
 
 const Button = styled.button`
-  width: 100%; padding: 12px;
+  width: 100%;
+  padding: 12px;
   background-color: var(--primary-blue, #007bff);
-  color: white; border: none; border-radius: 4px;
-  cursor: pointer; font-weight: bold; font-size: 16px;
-  &:hover { background-color: #0056b3; }
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 16px;
+  &:hover {
+    background-color: #0056b3;
+  }
 `;
 
 const Divider = styled.div`
@@ -66,18 +83,28 @@ const Divider = styled.div`
   
   span {
     position: absolute;
-    top: -10px; left: 50%; transform: translateX(-50%);
-    background-color: white; padding: 0 10px;
-    color: #999; font-size: 12px;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: white;
+    padding: 0 10px;
+    color: #999;
+    font-size: 12px;
   }
 `;
 
 const SocialButton = styled.button`
-  width: 100%; padding: 12px; margin-bottom: 10px;
-  border: none; border-radius: 4px;
-  font-weight: bold; font-size: 14px;
-  cursor: pointer; display: flex;
-  justify-content: center; align-items: center;
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 10px;
+  border: none;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   
   &.kakao { background-color: #FEE500; color: #000; }
   &.naver { background-color: #03C75A; color: #fff; }
@@ -87,50 +114,70 @@ const SocialButton = styled.button`
   &:hover { opacity: 0.9; }
 `;
 
+// 하단 링크 영역 스타일 (세로 배치)
 const Footer = styled.div`
   margin-top: 25px;
-  display: flex; flex-direction: column; gap: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   width: 100%;
+  align-items: center;
 `;
 
 const FooterRow = styled.div`
-  font-size: 13px; color: #666;
-  display: flex; justify-content: center; alignItems: center; gap: 5px;
+  font-size: 13px;
+  color: #666;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
 `;
 
 const LinkText = styled.span`
-  color: #007bff; cursor: pointer; font-weight: bold;
+  color: #007bff;
+  cursor: pointer;
+  font-weight: bold;
 `;
 
-// ⭐ [수정됨] QR 화면 스타일 (세로 배치 강제)
+// QR 화면 전용 스타일 (세로 배치 강제)
 const QrContainer = styled.div`
   display: flex;
-  flex-direction: column !important; /* 무조건 세로로! */
+  flex-direction: column !important;
   align-items: center;
   justify-content: center;
   gap: 20px;
   padding: 10px 0;
-  width: 100%; /* 너비 꽉 채우기 */
+  width: 100%;
 
   img {
-    width: 180px; height: 180px;
-    border: 1px solid #ddd; padding: 10px; border-radius: 8px;
-    display: block; /* 블록 요소로 변경 */
+    width: 180px;
+    height: 180px;
+    border: 1px solid #ddd;
+    padding: 10px;
+    border-radius: 8px;
+    display: block;
   }
   
-  p { 
-    font-size: 14px; color: #666; line-height: 1.5; 
-    margin: 0; 
-    width: 100%; 
+  p {
+    font-size: 14px;
+    color: #666;
+    line-height: 1.5;
+    margin: 0;
+    width: 100%;
     text-align: center;
-    white-space: normal; /* 글자 줄바꿈 허용 */
+    white-space: normal;
   }
 
-  .timer { color: #d60000; font-weight: bold; font-size: 14px; }
+  .timer {
+    color: #d60000;
+    font-weight: bold;
+    font-size: 14px;
+    margin: 5px 0;
+  }
 `;
 
 // ==========================================
-// 2. 컴포넌트 로직 정의
+// 2. 컴포넌트 로직 정의 (기능 영역)
 // ==========================================
 
 function LoginModal({ onClose }) {
@@ -145,7 +192,7 @@ function LoginModal({ onClose }) {
   const pollingRef = useRef(null);
 
   // ----------------------------------------
-  // 공통 기능: 로그인 성공 시 처리
+  // [공통] 로그인 성공 시 처리 함수
   // ----------------------------------------
   const handleLoginSuccess = (data) => {
     const { accessToken, refreshToken, token } = data;
@@ -163,9 +210,10 @@ function LoginModal({ onClose }) {
   };
 
   // ----------------------------------------
-  // QR 기능: 세션 생성, 타이머, 폴링
+  // [QR] 세션 생성, 타이머, 폴링
   // ----------------------------------------
 
+  // 모드 변경 감지
   useEffect(() => {
     if (isQrMode) {
       createQrSession();
@@ -175,6 +223,7 @@ function LoginModal({ onClose }) {
     return () => stopPolling();
   }, [isQrMode]);
 
+  // 타이머 작동
   useEffect(() => {
     let timer;
     if (isQrMode && timeLeft > 0) {
@@ -195,23 +244,21 @@ function LoginModal({ onClose }) {
       
       setQrSessionId(sessionId);
       setTimeLeft(300);
-      startPolling(sessionId);
+      startPolling(sessionId); // 생성 직후 감시 시작
 
     } catch (error) {
       console.error("QR 생성 실패:", error);
-      // alert("QR 코드 생성에 실패했습니다."); 
-      // setIsQrMode(false);
-      // (백엔드 미완성 시 테스트를 위해 가짜 세션 ID 부여)
-      setQrSessionId("test-session-id");
+      alert("QR 코드 생성에 실패했습니다. (백엔드 서버 확인 필요)");
+      setIsQrMode(false);
     }
   };
 
-  // 2. 2초마다 상태 확인 (Polling)
+  // 2. 상태 확인 (Polling) - /auth/qr/check 사용
   const startPolling = (sessionId) => {
     stopPolling(); 
     pollingRef.current = setInterval(async () => {
       try {
-        const res = await axios.get(`/auth/qr/status?sessionId=${sessionId}`);
+        const res = await axios.get(`/auth/qr/check?sessionId=${sessionId}`);
         const status = res.data.status; 
 
         if (status === 'APPROVED') {
@@ -223,7 +270,7 @@ function LoginModal({ onClose }) {
             setIsQrMode(false);
         }
       } catch (error) {
-         console.log("폴링 중...");
+         console.log("폴링 중 대기...");
       }
     }, 2000); 
   };
@@ -235,7 +282,7 @@ function LoginModal({ onClose }) {
     }
   };
 
-  // 3. 최종 로그인 (JWT 발급 요청)
+  // 3. 최종 로그인 요청 (JWT 발급)
   const performQrLogin = async (sessionId) => {
     try {
         const response = await axios.post('/auth/qr/login', { sessionId });
@@ -246,7 +293,7 @@ function LoginModal({ onClose }) {
   };
 
   // ----------------------------------------
-  // 기존 기능: 이메일 로그인
+  // [기존] 이메일 로그인
   // ----------------------------------------
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -258,6 +305,7 @@ function LoginModal({ onClose }) {
       alert("이메일과 비밀번호를 입력해주세요.");
       return;
     }
+
     try {
       const response = await axios.post('/auth/login', {
         email: formData.email,
@@ -271,6 +319,7 @@ function LoginModal({ onClose }) {
       if (error.response) {
         const { status, data } = error.response;
         
+        // 403: 이메일 미인증
         if (status === 403 && typeof data === 'string' && data.includes('이메일 인증')) {
             if (window.confirm(`${data}\n\n지금 인증 코드를 입력하시겠습니까?`)) {
                 onClose();
@@ -278,6 +327,7 @@ function LoginModal({ onClose }) {
             }
             return;
         }
+        // 401: 비밀번호 불일치
         if (status === 401) {
             alert("아이디 또는 비밀번호가 일치하지 않습니다.");
             return;
@@ -290,7 +340,7 @@ function LoginModal({ onClose }) {
   };
 
   // ----------------------------------------
-  // 기존 기능: 소셜 로그인
+  // [기존] 소셜 로그인 핸들러
   // ----------------------------------------
   const handleSocialLogin = (provider) => {
     const KAKAO_CLIENT_ID = import.meta.env.VITE_KAKAO_CLIENT_ID;
@@ -308,7 +358,7 @@ function LoginModal({ onClose }) {
       url = `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${NAVER_CLIENT_ID}&redirect_uri=${redirectUri}&state=${state}`;
     } else if (provider === 'google') {
       const redirectUri = `${REDIRECT_URI_ROOT}/google`;
-      url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${redirectUri}&response_type=code&scope=email profile`;
+      url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${redirectUri}&redirect_uri=${redirectUri}&response_type=code&scope=email profile`;
     }
     if (url) window.location.href = url;
   };
@@ -323,6 +373,9 @@ function LoginModal({ onClose }) {
     return `${min}:${sec < 10 ? '0' : ''}${sec}`;
   };
 
+  // ==========================================
+  // 3. 화면 렌더링 (View)
+  // ==========================================
   return (
     <ModalOverlay onClick={handleOverlayClick}>
       <ModalContent>
@@ -330,16 +383,15 @@ function LoginModal({ onClose }) {
         <Title>{isQrMode ? "QR코드 로그인" : "로그인"}</Title>
         
         {isQrMode ? (
+            // === QR 모드 화면 ===
             <QrContainer>
-                {/* QR 이미지 표시 */}
                 {qrSessionId ? (
                     <img 
                         src={`/auth/qr/image?sessionId=${qrSessionId}`} 
                         alt="QR Code" 
                         onError={(e) => {
-                             // 이미지가 없어도 레이아웃 유지를 위해 대체 이미지 표시
                              e.target.onerror = null; 
-                             e.target.src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=Backend_Not_Ready";
+                             e.target.src="https://via.placeholder.com/200?text=QR+Loading+Error";
                         }}
                     />
                 ) : (
@@ -363,6 +415,7 @@ function LoginModal({ onClose }) {
                 </Button>
             </QrContainer>
         ) : (
+            // === 일반 로그인 화면 ===
             <>
                 <form onSubmit={handleSubmit}>
                   <Input type="email" name="email" placeholder="이메일" value={formData.email} onChange={handleChange} />
@@ -404,6 +457,7 @@ function LoginModal({ onClose }) {
                 </Footer>
             </>
         )}
+
       </ModalContent>
     </ModalOverlay>
   );
