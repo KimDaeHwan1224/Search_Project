@@ -51,8 +51,8 @@ public class QrLoginController {
     @GetMapping(value = "/image", produces = MediaType.IMAGE_PNG_VALUE)
     public ResponseEntity<byte[]> getQrImage(@RequestParam String sessionId) throws Exception {
 
-        String qrUrl = "http://localhost:8484/auth/qr/check?sessionId=" + sessionId;
-
+        String qrUrl = "http://192.168.10.56:8484/auth/qr/check?sessionId=" + sessionId;
+        
         byte[] qrImage = qrService.generateQr(qrUrl);
 
         return ResponseEntity.ok(qrImage);
@@ -118,4 +118,26 @@ public class QrLoginController {
                 )
         );
     }
+    
+    /**
+     * 6) 모바일 화면에서 로그인 여부를 체크
+     * 로그인되지 않았다면 로그인 페이지
+     * 로그인돼 있다면 QR승인 페이지
+     */
+    @GetMapping("/check")
+    public ResponseEntity<?> checkQr(@RequestParam String sessionId) {
+
+        var session = qrService.getSession(sessionId);
+
+        if (session == null) {
+            return ResponseEntity.status(404).body("QR 세션이 만료됨");
+        }
+
+        // 여기서는 PC-QR 상태만 확인 (모바일 화면에서 처리)
+        return ResponseEntity.ok(Map.of(
+                "sessionId", sessionId,
+                "status", session.getStatus()
+        ));
+    }
+
 }
