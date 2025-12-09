@@ -51,7 +51,7 @@ CREATE TABLE USER_INFO (
     TOKEN_EXPIRE_AT    DATE,                            -- 토큰 만료 시간 (30분 등)
 
     ACCOUNT_STATUS     VARCHAR2(20) DEFAULT 'ACTIVE', --관리자 정지 기능(ACTIVE / SUSPENDED)
-    SUSPEND_UNTIL      DATE -- 정지 종료 시간
+    SUSPEND_UNTIL      DATE, -- 정지 종료 시간
     REFRESH_TOKEN      VARCHAR2(500) --refresh_token 
 );  
 --뉴스 ID자동증가 시퀀스
@@ -85,3 +85,4 @@ ADD CONSTRAINT CK_PASSWORD_PROVIDER CHECK (
     (PROVIDER != 'LOCAL')
 
 );
+
