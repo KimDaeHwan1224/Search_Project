@@ -142,7 +142,9 @@ function Header() {
   
   const [user, setUser] = useState(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-
+  
+  //관리자 판단
+  const isAdmin = user?.role === "ADMIN";
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
@@ -233,13 +235,27 @@ function Header() {
               {/* 드롭다운 메뉴 */}
               {isDropdownOpen && (
                 <DropdownMenu>
-                  <DropdownItem onClick={() => navigate('/mypage')}>
-                    마이페이지
-                  </DropdownItem>
-                  <DropdownItem onClick={() => navigate('/find-pw')}>
-                    비밀번호 변경
-                  </DropdownItem>
-                  <DropdownItem onClick={handleLogout}>
+
+                  {/* 관리자일 경우 관리자 페이지 메뉴 표시 */}
+                  {isAdmin ? (
+                    <>
+                      <DropdownItem onClick={() => navigate('/admin/dashboard')}>
+                        관리자 페이지
+                      </DropdownItem>
+                    </>
+                  ) : (
+                    <>
+                      <DropdownItem onClick={() => navigate('/mypage')}>
+                        마이페이지
+                      </DropdownItem>
+                      <DropdownItem onClick={() => navigate('/find-pw')}>
+                        비밀번호 변경
+                      </DropdownItem>
+                    </>
+                  )}
+
+                  {/* 공통 로그아웃 */}
+                  <DropdownItem onClick={handleLogout} style={{ color: '#dc3545' }}>
                     로그아웃
                   </DropdownItem>
                 </DropdownMenu>
