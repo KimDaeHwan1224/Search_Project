@@ -22,7 +22,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Component
 public class StockRealtimeHandler extends TextWebSocketHandler {
 
-	private final Map<String, List<WebSocketSession>> stockSessions = new ConcurrentHashMap<>();
+    private final Map<String, List<WebSocketSession>> stockSessions = new ConcurrentHashMap<>();
+
+    // 새로운 연결이 생겼을 때 호출
+    @Override
+    public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+        System.out.println("Spring WebSocket 연결됨: " + session.getId());
+        super.afterConnectionEstablished(session); // 부모 호출 (권장)
+    }
 
     @Override
     public void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
@@ -55,3 +62,4 @@ public class StockRealtimeHandler extends TextWebSocketHandler {
         }
     }
 }
+
