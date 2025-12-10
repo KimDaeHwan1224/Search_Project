@@ -96,13 +96,27 @@ public class MyPageController {
 
     // --- 뉴스 스크랩 관리 ---
 
+ // 1. 목록 조회 (상세페이지 & 마이페이지 공용 사용)
+    @GetMapping("/favorites/news")
+    public ResponseEntity<List<FavoriteDTO>> getFavoriteNews(@AuthenticationPrincipal UserDetails user) {
+        // 원래 있던(마이페이지용) 메서드를 그대로 재사용합니다.
+        // 반환 타입: List<Long>이 아니라 List<FavoriteDTO>가 됩니다.
+        return ResponseEntity.ok(userDAO.getFavoriteNews(user.getUsername()));
+    }
+
+    // 2. 추가
     @PostMapping("/favorites/news")
     public ResponseEntity<?> addNews(@RequestBody Map<String, Long> req, 
                                      @AuthenticationPrincipal UserDetails user) {
-        userDAO.addFavoriteNews(user.getUsername(), req.get("newsId"));
-        return ResponseEntity.ok("뉴스를 스크랩했습니다.");
+        try {
+            userDAO.addFavoriteNews(user.getUsername(), req.get("newsId"));
+            return ResponseEntity.ok("뉴스를 스크랩했습니다.");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("이미 스크랩했거나 오류 발생");
+        }
     }
 
+    // 3. 삭제
     @DeleteMapping("/favorites/news/{newsId}")
     public ResponseEntity<?> removeNews(@PathVariable Long newsId, 
                                         @AuthenticationPrincipal UserDetails user) {
