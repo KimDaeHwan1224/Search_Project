@@ -59,6 +59,13 @@ public class StockNewsController {
         return stockNewsService.getAllStockSentimentSummaryWithPeriod(days);
     }
 
+    @GetMapping("/sentiment/dashboard")
+    public List<Map<String, Object>> getDashboardSentimentSummary(
+            @RequestParam(defaultValue = "30") int days) {
+
+        return stockNewsService.getAllStockSentimentSummaryWithPeriod(days);
+    }
+
     // 종목별 날짜별 감성 통계 (트렌드)
     @GetMapping("/{stockCode}/sentiment/trend")
     public List<Map<String, Object>> getSentimentTrend(
