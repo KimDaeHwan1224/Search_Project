@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -68,7 +68,7 @@ const SimpleWordCloud = ({ words, onClick }) => {
 };
 
 // ==========================================
-// 2. 스타일 객체 정의 (수정: stockPrice 스타일 변경)
+// 2. 스타일 객체 정의 (원본 유지)
 // ==========================================
 const styles = {
     container: {
@@ -146,7 +146,7 @@ const styles = {
     stockPrice: (rate) => ({ 
         fontWeight: 'bold',
         fontSize: '16px',
-        color: getColor(rate) // ⭐ 등락률에 따라 색상 변경
+        color: getColor(rate)
     }), 
     stockIndustry: { fontSize: '12px', color: '#007bff', backgroundColor: '#eef4ff', padding: '2px 6px', borderRadius: '4px', marginLeft: '10px' },
     
@@ -165,8 +165,57 @@ const styles = {
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658'];
 
+
 // ==========================================
-// 3. 컴포넌트 로직
+// ⭐ 4. 분리된 차트 컴포넌트 (렌더링 최적화)
+// ==========================================
+
+const PortfolioChart = React.memo(({ stocks }) => {
+    // favorites.stocks가 변경될 때만 차트 데이터를 계산합니다.
+    const chartData = useMemo(() => {
+        if (!stocks || stocks.length === 0) return [];
+
+        const industryCount = stocks.reduce((acc, stock) => {
+            const industry = stock.industry || '기타(ETF 등)';
+            acc[industry] = (acc[industry] || 0) + 1;
+            return acc;
+        }, {});
+
+        const dataForChart = Object.keys(industryCount).map(key => ({
+            name: key, value: industryCount[key]
+        })).sort((a, b) => b.value - a.value);
+
+        return dataForChart;
+    }, [stocks]); // stocks 배열에만 의존
+
+    if (chartData.length === 0) return null;
+
+    return (
+        <div style={styles.chartSection}>
+            <div style={styles.chartTitle}>📊 내 포트폴리오 업종 분석</div>
+            <div style={{ width: '100%', height: 300 }}>
+                <ResponsiveContainer>
+                    <PieChart>
+                        <Pie data={chartData} cx="50%" cy="50%" labelLine={false}
+                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                            outerRadius={100} fill="#8884d8" dataKey="value"
+                        >
+                            {chartData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            ))}
+                        </Pie>
+                        <Tooltip formatter={(value) => `${value}개`} />
+                        <Legend />
+                    </PieChart>
+                </ResponsiveContainer>
+            </div>
+        </div>
+    );
+});
+
+
+// ==========================================
+// 5. 메인 컴포넌트
 // ==========================================
 
 function MyPage() {
@@ -182,10 +231,8 @@ function MyPage() {
         isOpen: false, type: null, id: null, content: ''
     });
 
-    const [chartData, setChartData] = useState([]);
     const [wordCloudData, setWordCloudData] = useState([]);
 
-    // ⭐ 실시간 시세 상태 및 Ref 추가
     const [rtStockData, setRtStockData] = useState({}); 
     const stompRef = useRef(null);
     const subRefs = useRef([]);
@@ -193,18 +240,16 @@ function MyPage() {
 
 
     // ============================================
-    // STOMP/Flask 구독 및 해제 로직
+    // STOMP/Flask 구독 및 해제 로직 (원본 유지)
     // ============================================
 
-    // STOMP 구독 초기화 + 새 구독
     const subscribeStocks = useCallback((list) => {
         const client = stompRef.current;
         if (!client || !client.connected) return;
 
-        // 기존 STOMP 구독 해제
         subRefs.current.forEach(sub => sub.unsubscribe());
         subRefs.current = [];
-        setRtStockData({}); // 실시간 데이터 상태 초기화
+        setRtStockData({}); 
 
         list.forEach(item => {
             const code = item.stockCode;
@@ -212,7 +257,6 @@ function MyPage() {
 
             const sub = client.subscribe(`/topic/stock/${code}`, (msg) => {
                 const data = JSON.parse(msg.body);
-                // 실시간 데이터 상태 업데이트
                 setRtStockData(prev => ({
                     ...prev,
                     [code]: { 
@@ -226,15 +270,12 @@ function MyPage() {
         });
     }, []);
 
-    // Flask 구독 초기화 + 새 구독
     const subscribeFlask = useCallback((list) => {
         const newCodes = list.map(item => item.stockCode).filter(code => code);
         const codesToUnsubscribe = Array.from(subscribedFlaskRef.current).filter(code => !newCodes.includes(code));
         
-        // 이전 구독 해제
         unsubscribeFlask(codesToUnsubscribe);
 
-        // 새 구독
         newCodes.forEach(code => {
             if (!subscribedFlaskRef.current.has(code)) {
                 fetch("http://localhost:5000/subscribe", {
@@ -247,7 +288,6 @@ function MyPage() {
         });
     }, []);
 
-    // 전체 구독 리셋 (관심 종목 목록 로드 시)
     const resetSubscriptions = useCallback((list) => {
         if (!stompRef.current?.connected) return;
         subscribeStocks(list);
@@ -258,7 +298,6 @@ function MyPage() {
     // 데이터 로드 및 STOMP 연결
     // ============================================
 
-    // 1. 마운트 시 STOMP 연결 및 데이터 로드
     useEffect(() => {
         const token = localStorage.getItem('accessToken');
         if (!token) {
@@ -267,7 +306,6 @@ function MyPage() {
             return;
         }
 
-        // STOMP 연결 설정
         const sock = new SockJS("http://localhost:8484/ws-stock");
         const client = new Client({
             webSocketFactory: () => sock,
@@ -276,7 +314,6 @@ function MyPage() {
 
         client.onConnect = () => {
             console.log("🟢 WebSocket 연결 성공");
-            // 연결 후 데이터 로드 시작
             fetchData(token);
         };
 
@@ -287,7 +324,6 @@ function MyPage() {
         client.activate();
         stompRef.current = client;
         
-        // 데이터 로드 함수
         const fetchData = async (authToken) => {
             try {
                 const res = await axios.get('/api/mypage/info', {
@@ -302,21 +338,7 @@ function MyPage() {
                     setFavorites({ stocks, news });
                     setEditForm({ fullName: res.data.user.fullName });
 
-                    // 1. 차트 데이터 생성
-                    const industryCount = stocks.reduce((acc, stock) => {
-                        const industry = stock.industry || '기타(ETF 등)';
-                        acc[industry] = (acc[industry] || 0) + 1;
-                        return acc;
-                    }, {});
-                    const dataForChart = Object.keys(industryCount).map(key => ({
-                        name: key, value: industryCount[key]
-                    })).sort((a, b) => b.value - a.value);
-                    setChartData(dataForChart);
-
-                    // 2. 워드클라우드 데이터 생성
                     generateWordCloud(news);
-
-                    // 3. ⭐ 실시간 구독 시작 (STOMP 연결 성공 후)
                     resetSubscriptions(stocks);
                 }
             } catch (error) {
@@ -326,19 +348,14 @@ function MyPage() {
             }
         };
 
-
-        // 2. 언마운트 시 구독 해제
         return () => {
-            // STOMP 구독 해제
             subRefs.current.forEach(sub => sub.unsubscribe());
             subRefs.current = [];
             if (client) client.deactivate();
-            // Flask 구독 해제
             unsubscribeFlask(Array.from(subscribedFlaskRef.current)); 
         };
     }, [navigate, resetSubscriptions]);
 
-    // ⭐ [개선됨] 워드클라우드 생성 함수 (원본 유지)
     const generateWordCloud = (newsList) => {
         const wordMap = {};
         const stopWords = ['뉴스', '속보', '특징주', '종합', '오늘', '내일', '마감', '상승', '하락', '급등', '급락', '포토', '영상', 'Why', '코스피', '코스닥', '공시', '단독', '주가', '전망'];
@@ -412,10 +429,9 @@ function MyPage() {
             const token = localStorage.getItem('accessToken');
             await axios.delete(`/api/mypage/favorites/stock/${stockCode}`, { headers: { Authorization: `Bearer ${token}` } });
             
-            // ⭐ 삭제 후 구독 목록 갱신을 위해 resetSubscriptions 호출
             const updatedStocks = favorites.stocks.filter(s => s.stockCode !== stockCode);
             setFavorites(prev => ({ ...prev, stocks: updatedStocks }));
-            resetSubscriptions(updatedStocks); // 구독 목록 갱신
+            resetSubscriptions(updatedStocks);
         } catch (e) { alert("삭제 실패"); }
     };
 
@@ -426,7 +442,6 @@ function MyPage() {
             await axios.delete(`/api/mypage/favorites/news/${newsId}`, { headers: { Authorization: `Bearer ${token}` } });
             const updatedNews = favorites.news.filter(n => n.newsId !== newsId);
             setFavorites(prev => ({ ...prev, news: updatedNews }));
-            // 삭제 후 클라우드 다시 계산
             generateWordCloud(updatedNews);
         } catch (e) { alert("삭제 실패"); }
     };
@@ -490,7 +505,7 @@ function MyPage() {
     if (!userInfo) return <div style={{textAlign:'center', marginTop:'50px'}}>로딩중...</div>;
 
     // ============================================
-    // 4. 렌더링
+    // 6. 렌더링
     // ============================================
 
     return (
@@ -537,29 +552,11 @@ function MyPage() {
                 </div>
             )}
 
+            {/* ⭐ STOCK 탭일 때만 차트와 목록을 렌더링하여 부하를 줄입니다. */}
             {activeTab === 'STOCK' && (
                 <>
-                    {combinedStocks.length > 0 && (
-                        <div style={styles.chartSection}>
-                            <div style={styles.chartTitle}>📊 내 포트폴리오 업종 분석</div>
-                            <div style={{ width: '100%', height: 300 }}>
-                                <ResponsiveContainer>
-                                    <PieChart>
-                                        <Pie data={chartData} cx="50%" cy="50%" labelLine={false}
-                                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                                            outerRadius={100} fill="#8884d8" dataKey="value"
-                                        >
-                                            {chartData.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip formatter={(value) => `${value}개`} />
-                                        <Legend />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </div>
-                    )}
+                    {/* 분리된 차트 컴포넌트 사용 */}
+                    <PortfolioChart stocks={favorites.stocks} />
 
                     <div style={styles.card}>
                         {combinedStocks.length === 0 ? <p style={{color:'#888'}}>찜한 종목이 없습니다.</p> : 
