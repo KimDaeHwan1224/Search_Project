@@ -273,10 +273,10 @@ def find_stock_code(conn, title, content):
         return None
 
 # ===============================
-# 날짜 텍스트 파싱 (개선된 함수 - "입력 YYYY.MM.DD. 오후 HH:MM" 형식 지원)
+# 날짜+시간 텍스트 파싱 (개선된 함수 - "입력 YYYY.MM.DD. 오후 HH:MM" 형식 지원)
 # ===============================
-def parse_news_date_from_text(date_text):
-    """다양한 형식의 날짜 텍스트를 DATE 형식으로 변환 (개선)"""
+def parse_news_datetime_from_text(date_text):
+    """다양한 형식의 날짜+시간 텍스트를 DATETIME 형식으로 변환 (시간 정보 포함)"""
     if not date_text:
         return None
     
@@ -289,50 +289,101 @@ def parse_news_date_from_text(date_text):
         date_text = re.sub(r'^(입력|기사입력|입력일시|작성일|발행일|게시일)\s*:?\s*', '', date_text, flags=re.IGNORECASE)
         date_text = date_text.strip()
         
-        # "오후 5:53" 같은 시간 부분 제거
-        date_text = re.sub(r'\s*오[전후]\s*\d{1,2}:\d{2}.*$', '', date_text)
-        date_text = re.sub(r'\s*\d{1,2}:\d{2}.*$', '', date_text)  # 시간 형식 제거
+        # 시간 정보 추출 (오전/오후 HH:MM 형식) - 더 강화된 패턴
+        time_match = None
+        hour = 0
+        minute = 0
+        second = 0
+        
+        # 패턴 1: "오후 5:53", "오전 9:30" 형식
+        time_match = re.search(r'오([전후])\s*(\d{1,2}):(\d{2})', date_text)
+        if time_match:
+            am_pm = time_match.group(1)
+            hour = int(time_match.group(2))
+            minute = int(time_match.group(3))
+            if am_pm == '후' and hour != 12:
+                hour += 12
+            elif am_pm == '전' and hour == 12:
+                hour = 0
+            # 시간 부분 제거
+            date_text = re.sub(r'\s*오[전후]\s*\d{1,2}:\d{2}.*$', '', date_text)
+        else:
+            # 패턴 2: "14:30", "14:30:45" 형식 (24시간 형식)
+            time_match = re.search(r'(\d{1,2}):(\d{2})(?::(\d{2}))?', date_text)
+            if time_match:
+                hour = int(time_match.group(1))
+                minute = int(time_match.group(2))
+                if time_match.group(3):
+                    second = int(time_match.group(3))
+                # 시간 부분 제거
+                date_text = re.sub(r'\s*\d{1,2}:\d{2}(?::\d{2})?.*$', '', date_text)
+            else:
+                # 패턴 3: "입력 2025.12.11. 오후 5:53" 형식 (공백 포함)
+                time_match = re.search(r'\.\s*오([전후])\s*(\d{1,2}):(\d{2})', date_text)
+                if time_match:
+                    am_pm = time_match.group(1)
+                    hour = int(time_match.group(2))
+                    minute = int(time_match.group(3))
+                    if am_pm == '후' and hour != 12:
+                        hour += 12
+                    elif am_pm == '전' and hour == 12:
+                        hour = 0
+                    # 시간 부분 제거
+                    date_text = re.sub(r'\.\s*오[전후]\s*\d{1,2}:\d{2}.*$', '', date_text)
+        
         date_text = date_text.strip()
         
         # "2025.12.05" 또는 "2025. 12. 05" 또는 "2025.12.05." 형식
         match = re.search(r'(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.?', date_text)
         if match:
             year, month, day = match.groups()
-            return datetime(int(year), int(month), int(day)).date()
+            return datetime(int(year), int(month), int(day), hour, minute, second)
         
         # "2025-12-05" 형식
         match = re.search(r'(\d{4})-(\d{1,2})-(\d{1,2})', date_text)
         if match:
             year, month, day = match.groups()
-            return datetime(int(year), int(month), int(day)).date()
+            return datetime(int(year), int(month), int(day), hour, minute, second)
         
         # "2025년 12월 05일" 형식
         match = re.search(r'(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일', date_text)
         if match:
             year, month, day = match.groups()
-            return datetime(int(year), int(month), int(day)).date()
+            return datetime(int(year), int(month), int(day), hour, minute, second)
         
         # "12.05" 형식 (올해로 가정)
         match = re.search(r'^(\d{1,2})\.(\d{1,2})', date_text)
         if match:
             month, day = match.groups()
             year = datetime.now().year
-            return datetime(year, int(month), int(day)).date()
+            return datetime(year, int(month), int(day), hour, minute, second)
         
         # ISO 형식 "2025-12-05T10:30:00" 또는 "2025-12-05 10:30:00"
-        iso_match = re.search(r'(\d{4})-(\d{1,2})-(\d{1,2})[T\s]', date_text)
+        iso_match = re.search(r'(\d{4})-(\d{1,2})-(\d{1,2})[T\s](\d{1,2}):(\d{2})(?::(\d{2}))?', date_text)
         if iso_match:
-            year, month, day = iso_match.groups()
-            return datetime(int(year), int(month), int(day)).date()
+            year, month, day, h, m = iso_match.groups()[:5]
+            sec = int(iso_match.group(6)) if len(iso_match.groups()) > 5 and iso_match.group(6) else 0
+            return datetime(int(year), int(month), int(day), int(h), int(m), sec)
         
         # 숫자만 있는 경우 "20251205"
         if re.match(r'^\d{8}$', date_text):
-            return datetime.strptime(date_text, "%Y%m%d").date()
+            dt = datetime.strptime(date_text, "%Y%m%d")
+            return datetime(dt.year, dt.month, dt.day, hour, minute, second)
         
     except Exception as e:
-        print(f"    날짜 파싱 오류: {date_text} -> {e}")
+        print(f"    날짜+시간 파싱 오류: {date_text} -> {e}")
         pass
     
+    return None
+
+# ===============================
+# 날짜 텍스트 파싱 (기존 함수 - 호환성 유지, 시간 정보 제거)
+# ===============================
+def parse_news_date_from_text(date_text):
+    """다양한 형식의 날짜 텍스트를 DATE 형식으로 변환 (시간 정보 제거, 기존 호환성 유지)"""
+    dt = parse_news_datetime_from_text(date_text)
+    if dt:
+        return dt.date()
     return None
 
 # ===============================
@@ -370,9 +421,9 @@ def fetch_news_content_and_date(news_url):
             date_elem = soup.select_one(selector)
             if date_elem:
                 date_text = date_elem.get_text().strip()
-                news_date = parse_news_date_from_text(date_text)
+                news_date = parse_news_datetime_from_text(date_text)  # 시간 정보 포함
                 if news_date:
-                    print(f"    ✓ 방법1({selector})에서 날짜 추출: {news_date}")
+                    print(f"    ✓ 방법1({selector})에서 날짜+시간 추출: {news_date}")
                     break
         
         # 방법 2: 기사 본문 상단의 날짜
@@ -390,9 +441,9 @@ def fetch_news_content_and_date(news_url):
                 date_elem = soup.select_one(selector)
                 if date_elem:
                     date_text = date_elem.get_text().strip()
-                    news_date = parse_news_date_from_text(date_text)
+                    news_date = parse_news_datetime_from_text(date_text)  # 시간 정보 포함
                     if news_date:
-                        print(f"    ✓ 방법2({selector})에서 날짜 추출: {news_date}")
+                        print(f"    ✓ 방법2({selector})에서 날짜+시간 추출: {news_date}")
                         break
         
         # 방법 3: 메타 태그에서 날짜 추출
@@ -410,19 +461,30 @@ def fetch_news_content_and_date(news_url):
                 if meta_date:
                     date_attr = meta_date.get("content", "") or meta_date.get("value", "")
                     if date_attr:
-                        news_date = parse_news_date_from_text(date_attr)
+                        news_date = parse_news_datetime_from_text(date_attr)  # 시간 정보 포함
                         if news_date:
-                            print(f"    ✓ 방법3(메타태그)에서 날짜 추출: {news_date}")
+                            print(f"    ✓ 방법3(메타태그)에서 날짜+시간 추출: {news_date}")
                             break
         
-        # 방법 4: URL에서 날짜 추출 (네이버 뉴스 URL 형식: .../article/.../20251209123456)
+        # 방법 4: URL에서 날짜+시간 추출 (네이버 뉴스 URL 형식: .../article/.../20251209123456)
         if not news_date:
-            url_match = re.search(r'/(\d{8})/', news_url)
+            # 날짜+시간 형식: 20251209123456 (YYYYMMDDHHMMSS)
+            url_match = re.search(r'/(\d{14})/', news_url)
             if url_match:
                 date_str = url_match.group(1)
-                news_date = parse_news_date_from_text(date_str)
-                if news_date:
-                    print(f"    ✓ 방법4(URL)에서 날짜 추출: {news_date}")
+                try:
+                    news_date = datetime.strptime(date_str, "%Y%m%d%H%M%S")
+                    print(f"    ✓ 방법4(URL)에서 날짜+시간 추출: {news_date}")
+                except:
+                    pass
+            # 날짜만 형식: 20251209 (YYYYMMDD)
+            if not news_date:
+                url_match = re.search(r'/(\d{8})/', news_url)
+                if url_match:
+                    date_str = url_match.group(1)
+                    news_date = parse_news_datetime_from_text(date_str)  # 시간 정보 포함
+                    if news_date:
+                        print(f"    ✓ 방법4(URL)에서 날짜 추출: {news_date}")
         
         # 방법 5: 기사 헤더 영역의 날짜
         if not news_date:
@@ -439,9 +501,9 @@ def fetch_news_content_and_date(news_url):
                 header_date = soup.select_one(selector)
                 if header_date:
                     date_text = header_date.get_text().strip()
-                    news_date = parse_news_date_from_text(date_text)
+                    news_date = parse_news_datetime_from_text(date_text)  # 시간 정보 포함
                     if news_date:
-                        print(f"    ✓ 방법5(헤더)에서 날짜 추출: {news_date}")
+                        print(f"    ✓ 방법5(헤더)에서 날짜+시간 추출: {news_date}")
                         break
         
         # 방법 6: 기사 정보 영역 전체에서 날짜 패턴 찾기
@@ -630,17 +692,42 @@ def parse_news_list(conn, sid1=101, page=1, date_str=None):
                 print(f"  본문 크롤링 중: {title[:50]}...")
                 content, news_date_from_content = fetch_news_content_and_date(news_url)
                 
-                # 본문에서 날짜를 가져왔으면 그것을 사용, 없으면 리스트 페이지 날짜 사용, 둘 다 없으면 오늘 날짜 사용 (NULL 방지)
+                # 본문에서 날짜+시간을 가져왔으면 그것을 사용, 없으면 리스트 페이지 날짜 사용, 둘 다 없으면 현재 시간 사용 (NULL 방지)
                 if news_date_from_content:
                     news_date = news_date_from_content
-                    print(f"    ✓ 본문에서 날짜 추출 성공: {news_date}")
+                    # datetime 객체인 경우 그대로 사용
+                    if isinstance(news_date, datetime):
+                        # 시간이 00:00:00이면 크롤링 시간 사용 (시간 정보가 없는 경우)
+                        if news_date.hour == 0 and news_date.minute == 0 and news_date.second == 0:
+                            current_time = datetime.now()
+                            news_date = datetime(news_date.year, news_date.month, news_date.day, 
+                                                current_time.hour, current_time.minute, current_time.second)
+                            print(f"    ✓ 본문에서 날짜 추출 성공 (시간 정보 없음, 크롤링 시간 사용): {news_date}")
+                        else:
+                            print(f"    ✓ 본문에서 날짜+시간 추출 성공: {news_date}")
+                    else:
+                        # date 객체인 경우 크롤링 시간으로 datetime 변환
+                        current_time = datetime.now()
+                        news_date = datetime.combine(news_date, current_time.time())
+                        print(f"    ✓ 본문에서 날짜 추출 성공 (크롤링 시간 추가): {news_date}")
                 elif news_date_backup:
                     news_date = news_date_backup
-                    print(f"    ⚠ 본문에서 날짜 추출 실패, 리스트 페이지 날짜 사용: {news_date}")
+                    # date 객체인 경우 크롤링 시간으로 datetime 변환
+                    if isinstance(news_date, datetime):
+                        # 시간이 00:00:00이면 크롤링 시간 사용
+                        if news_date.hour == 0 and news_date.minute == 0 and news_date.second == 0:
+                            current_time = datetime.now()
+                            news_date = datetime(news_date.year, news_date.month, news_date.day, 
+                                                current_time.hour, current_time.minute, current_time.second)
+                        print(f"    ⚠ 본문에서 날짜+시간 추출 실패, 리스트 페이지 날짜 사용 (시간 보정): {news_date}")
+                    else:
+                        current_time = datetime.now()
+                        news_date = datetime.combine(news_date, current_time.time())
+                        print(f"    ⚠ 본문에서 날짜 추출 실패, 리스트 페이지 날짜 사용 (크롤링 시간 추가): {news_date}")
                 else:
-                    # ★ NULL 방지: 날짜가 없으면 오늘 날짜 사용
-                    news_date = datetime.now().date()
-                    print(f"    ⚠ 날짜 추출 실패, 오늘 날짜 사용: {news_date}")
+                    # ★ NULL 방지: 날짜가 없으면 현재 시간 사용
+                    news_date = datetime.now()
+                    print(f"    ⚠ 날짜 추출 실패, 현재 시간 사용: {news_date}")
                 
                 # ★ CONTENT가 없거나 짧으면 제목 기반으로 생성 (NULL 방지)
                 if not content or len(content.strip()) < 50:
@@ -752,32 +839,32 @@ def insert_news(conn, news_item):
         if not content_val:
             content_val = title_val
         
-        # 5. NEWS_DATE 체크 (없으면 오늘 날짜 사용)
+        # 5. NEWS_DATE 체크 (없으면 현재 시간 사용, datetime 객체 지원)
         news_date = news_item.get('news_date')
         try:
             if not news_date:
-                news_date = datetime.now().date()
+                news_date = datetime.now()  # datetime 객체로 저장 (시간 정보 포함)
             elif isinstance(news_date, str):
-                # 문자열인 경우 파싱 시도
-                parsed_date = parse_news_date_from_text(news_date)
-                news_date = parsed_date if parsed_date else datetime.now().date()
+                # 문자열인 경우 파싱 시도 (시간 정보 포함)
+                parsed_date = parse_news_datetime_from_text(news_date)
+                if parsed_date:
+                    news_date = parsed_date  # datetime 객체
+                else:
+                    # 파싱 실패 시 현재 시간 사용
+                    news_date = datetime.now()
+            elif isinstance(news_date, datetime):
+                # 이미 datetime 객체이므로 그대로 사용
+                pass
+            elif isinstance(news_date, date) and not isinstance(news_date, datetime):
+                # date 객체인 경우 현재 시간으로 datetime 변환
+                news_date = datetime.combine(news_date, datetime.now().time())
             else:
-                # date 객체인지 확인 (datetime.date 타입과 직접 비교)
-                try:
-                    # datetime.now().date()의 타입과 비교
-                    if type(news_date) == type(datetime.now().date()):
-                        # 이미 date 객체이므로 그대로 사용
-                        pass
-                    else:
-                        # date 객체가 아니면 오늘 날짜 사용
-                        news_date = datetime.now().date()
-                except:
-                    # 타입 체크 실패 시 오늘 날짜 사용
-                    news_date = datetime.now().date()
+                # 알 수 없는 타입이면 현재 시간 사용
+                news_date = datetime.now()
         except Exception as e:
-            # 날짜 처리 중 에러 발생 시 오늘 날짜 사용
-            print(f"    ⚠ 날짜 처리 오류: {e}, 오늘 날짜 사용")
-            news_date = datetime.now().date()
+            # 날짜 처리 중 에러 발생 시 현재 시간 사용
+            print(f"    ⚠ 날짜 처리 오류: {e}, 현재 시간 사용")
+            news_date = datetime.now()
         
         # ★★★ 감성 분석 결과 가져오기 (NULL 방지 강화 - 반드시 값 보장)
         sentiment_val = news_item.get('sentiment')
@@ -1023,27 +1110,40 @@ def main():
             print(f"목표: STOCK_CODE가 있는 뉴스 {target_count}개 추가\n")
         
         start_time = datetime.now()
-        max_pages_per_date = 30 if is_scheduler_mode else 50  # 스케줄러 모드: 30페이지로 제한 (속도 개선)
+        max_pages_per_date = 50 if is_scheduler_mode else 50  # 스케줄러 모드: 50페이지 (더 많은 데이터 수집)
         
-        # 스케줄러 모드: 연속 중복 체크 (매우 완화된 조건)
-        max_attempts = 500 if is_scheduler_mode else None  # 200 → 500으로 증가 (더 많은 시도 허용)
-        max_consecutive_duplicates = 200 if is_scheduler_mode else None  # 100 → 200으로 증가 (더 많은 연속 중복 허용)
+        # 스케줄러 모드: 종료 조건 완화 (최신 뉴스 위주로 더 많이 수집)
+        max_attempts = 3000 if is_scheduler_mode else None  # 500 → 3000으로 대폭 증가
+        max_consecutive_duplicates = 1000 if is_scheduler_mode else None  # 200 → 1000으로 대폭 증가 (연속 중복 허용)
+        min_collect_count = 50 if is_scheduler_mode else None  # 스케줄러 모드: 최소 50개 수집 목표
         consecutive_duplicates = 0
         attempts = 0
         
         # 무한 루프로 100개가 추가될 때까지 계속 크롤링 (일반 모드)
         # 또는 새로운 뉴스를 찾을 때까지 크롤링 (스케줄러 모드)
         while True:
-            # 스케줄러 모드: 최대 시도 횟수 체크
+            # 스케줄러 모드: 종료 조건 체크 (완화된 조건)
             if is_scheduler_mode:
                 attempts += 1
-                if max_attempts and attempts > max_attempts:
-                    print(f"\n⚠ 최대 시도 횟수({max_attempts}) 도달, 종료")
-                    break
                 
-                if max_consecutive_duplicates and consecutive_duplicates >= max_consecutive_duplicates:
-                    print(f"\n⚠ 연속 중복 {consecutive_duplicates}개 발생, 종료")
-                    break
+                # 현재 수집된 개수 확인
+                current_db_count = verify_db_count(conn)
+                actual_increase = current_db_count - before_count
+                
+                # 최소 수집 목표가 있고 아직 달성하지 못했다면 계속 진행
+                if min_collect_count and actual_increase < min_collect_count:
+                    # 최소 목표 미달성 시에는 종료 조건을 무시하고 계속 진행
+                    if attempts % 100 == 0:  # 100번마다 진행 상황 출력
+                        print(f"  [진행] 수집: {actual_increase}개 / 목표: {min_collect_count}개, 시도: {attempts}회, 연속 중복: {consecutive_duplicates}개")
+                else:
+                    # 최소 목표 달성 후에만 종료 조건 체크
+                    if max_attempts and attempts > max_attempts:
+                        print(f"\n✓ 최소 목표 달성({actual_increase}개) + 최대 시도 횟수({max_attempts}) 도달, 종료")
+                        break
+                    
+                    if max_consecutive_duplicates and consecutive_duplicates >= max_consecutive_duplicates:
+                        print(f"\n✓ 최소 목표 달성({actual_increase}개) + 연속 중복 {consecutive_duplicates}개 발생, 종료")
+                        break
             
             # 일반 모드: 실제 DB 증가 개수 확인
             if not is_scheduler_mode:
