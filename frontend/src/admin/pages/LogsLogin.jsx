@@ -157,7 +157,7 @@ export default function LogLogin() {
 
   return (
     <Box sx={{ p: 3, width: "100%", display: "flex", justifyContent: "center" }}>
-      <Card sx={{ width: "1200px", p: 3 }}>
+      <Card sx={{ width: "100%", p: 3 }}>
         <Stack direction="row" justifyContent="space-between" mb={2}>
           <Typography variant="h5" fontWeight="bold">
             로그인 로그

@@ -126,7 +126,7 @@ export default function Tokens() {
 
   return (
     <Box sx={{ p: 3, width: "100%", display: "flex", justifyContent: "center" }}>
-      <Card sx={{ width: "1200px", p: 3 }}>
+      <Card sx={{ width: "100%", p: 3 }}>
         {/* 제목 */}
         <Typography variant="h5" fontWeight="bold" mb={2}>
           토큰 관리
