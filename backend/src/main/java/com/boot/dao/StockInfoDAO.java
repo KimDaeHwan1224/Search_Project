@@ -6,6 +6,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import com.boot.dto.StockInfoDTO;
+import com.boot.dto.StockNewsDTO;
 
 @Mapper
 public interface StockInfoDAO {
@@ -25,4 +26,6 @@ public interface StockInfoDAO {
     
     // 🌟 급락 종목 (등락률 하위 3개)
     List<StockInfoDTO> selectTopFallingStocks();
+    
+    List<StockNewsDTO> searchNews(String keyword);
 }

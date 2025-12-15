@@ -44,8 +44,10 @@ public class StockController {
 
     // 자동완성 + 검색
     @GetMapping("/search")
-    public List<StockInfoDTO> search(@RequestParam String keyword) {
-        return stockInfoService.searchStocks(keyword);
+    public ResponseEntity<Map<String, Object>> search(@RequestParam String keyword) {
+        // Service에서 종목과 뉴스를 묶은 Map을 받아옵니다.
+        Map<String, Object> result = stockInfoService.searchIntegrated(keyword);
+        return ResponseEntity.ok(result);
     }
 
     // 상세보기
