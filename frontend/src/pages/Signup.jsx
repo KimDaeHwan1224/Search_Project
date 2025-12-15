@@ -1,111 +1,102 @@
 import React, { useState, useEffect } from 'react';
-import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-// --- 스타일 컴포넌트 ---
-const Container = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: calc(100vh - 80px);
-  background-color: #f8f9fa;
-`;
-
-const SignupBox = styled.div`
-  width: 480px;
-  padding: 40px;
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  text-align: center;
-`;
-
-const Title = styled.h2`
-  margin-bottom: 30px;
-  color: #333;
-`;
-
-const InputGroup = styled.div`
-  margin-bottom: 15px;
-  text-align: left;
-  
-  label {
-    display: block;
-    margin-bottom: 5px;
-    font-size: 14px;
-    color: #666;
+// --- 스타일 객체 정의 (라이브러리 제거됨) ---
+const styles = {
+  container: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 'calc(100vh - 80px)',
+    backgroundColor: '#f8f9fa',
+  },
+  signupBox: {
+    width: '480px',
+    padding: '40px',
+    backgroundColor: 'white',
+    borderRadius: '8px',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+    textAlign: 'center',
+  },
+  title: {
+    marginBottom: '30px',
+    color: '#333',
+    fontSize: '24px',
+    fontWeight: 'bold',
+  },
+  inputGroup: {
+    marginBottom: '15px',
+    textAlign: 'left',
+  },
+  label: {
+    display: 'block',
+    marginBottom: '5px',
+    fontSize: '14px',
+    color: '#666',
+  },
+  emailRow: {
+    display: 'flex',
+    gap: '10px',
+  },
+  input: {
+    width: '100%',
+    padding: '12px',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    fontSize: '14px',
+    outline: 'none',
+    boxSizing: 'border-box',
+  },
+  button: {
+    width: '100%',
+    padding: '12px',
+    backgroundColor: '#007bff', // var(--primary-blue) 대체
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    fontSize: '16px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    marginTop: '20px',
+  },
+  buttonDisabled: {
+    backgroundColor: '#ccc',
+    cursor: 'not-allowed',
+    opacity: 0.7,
+  },
+  checkButton: {
+    width: '100px',
+    padding: '0',
+    backgroundColor: '#6c757d',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    fontSize: '13px',
+    cursor: 'pointer',
+    height: '42px', // 인풋 높이와 맞춤
+  },
+  message: {
+    fontSize: '12px',
+    marginTop: '5px',
+    display: 'block',
+    fontWeight: 'bold',
+  },
+  footer: {
+    marginTop: '30px',
+    fontSize: '13px',
+    color: '#666',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+  },
+  linkText: {
+    color: '#007bff',
+    cursor: 'pointer',
+    marginLeft: '5px',
+    fontWeight: 'bold',
   }
-`;
-
-const EmailRow = styled.div`
-  display: flex;
-  gap: 10px;
-`;
-
-const Input = styled.input`
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-  outline: none;
-  box-sizing: border-box; 
-  &:focus { border-color: var(--primary-blue, #007bff); }
-`;
-
-const Button = styled.button`
-  width: 100%;
-  padding: 12px;
-  background-color: var(--primary-blue, #007bff);
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 16px;
-  font-weight: bold;
-  cursor: pointer;
-  margin-top: 20px;
-  &:hover { background-color: #0056b3; }
-  &:disabled { background-color: #ccc; cursor: not-allowed; }
-`;
-
-const CheckButton = styled.button`
-  width: 100px;
-  padding: 0;
-  background-color: #6c757d;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 13px;
-  cursor: pointer;
-  &:hover { background-color: #5a6268; }
-`;
-
-// 메시지 스타일 (성공: 초록, 실패: 빨강)
-const Message = styled.span`
-  font-size: 12px;
-  margin-top: 5px;
-  display: block;
-  color: ${props => props.isValid ? '#28a745' : '#dc3545'};
-  font-weight: bold;
-`;
-
-// 하단 링크 영역
-const Footer = styled.div`
-  margin-top: 30px;
-  font-size: 13px;
-  color: #666;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-`;
-
-const LinkText = styled.span`
-  color: #007bff;
-  cursor: pointer;
-  margin-left: 5px;
-  font-weight: bold;
-`;
+};
 
 function Signup() {
   const navigate = useNavigate();
@@ -123,9 +114,12 @@ function Signup() {
   const [emailMessage, setEmailMessage] = useState('');
   const [isEmailValid, setIsEmailValid] = useState(false);
 
-  // ⭐ [추가] 비밀번호 메시지 상태
+  // 비밀번호 메시지 상태
   const [passwordMessage, setPasswordMessage] = useState('');
   const [isPasswordValid, setIsPasswordValid] = useState(false);
+
+  // ⭐ 제출 중인지 확인하는 상태 (중복 클릭 방지)
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // 로그인 상태 체크
   useEffect(() => {
@@ -151,7 +145,7 @@ function Signup() {
       setEmailMessage(''); 
     }
 
-    // ⭐ 2. 비밀번호 입력 시 실시간 검사
+    // 2. 비밀번호 입력 시 실시간 검사
     if (name === 'password') {
         if (value.length === 0) {
             setPasswordMessage("");
@@ -200,6 +194,9 @@ function Signup() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // 이미 제출 중이면 함수 실행 중단
+    if (isSubmitting) return;
+
     if (!formData.email || !formData.password || !formData.name) {
       alert("모든 정보를 입력해주세요.");
       return;
@@ -210,7 +207,6 @@ function Signup() {
       return;
     }
 
-    // ⭐ 제출 전 한 번 더 확인 (안전장치)
     if (!isPasswordValid) {
       alert("비밀번호 조건을 확인해주세요.");
       return;
@@ -220,6 +216,9 @@ function Signup() {
       alert('비밀번호가 일치하지 않습니다!');
       return;
     }
+
+    // ⭐ 제출 시작 - 버튼 잠금
+    setIsSubmitting(true);
 
     const name = formData.name.trim();
     const lastName = name.substring(0, 1);
@@ -239,6 +238,10 @@ function Signup() {
 
     } catch (error) {
       console.error('가입 에러:', error);
+      
+      // ⭐ 실패 시 다시 버튼 풀기 (재시도 가능하게)
+      setIsSubmitting(false);
+
       if (error.response && error.response.data) {
          alert(error.response.data);
       } else {
@@ -247,76 +250,103 @@ function Signup() {
     }
   };
 
+  const isButtonDisabled = !isEmailChecked || isSubmitting;
+
   return (
-    <Container>
-      <SignupBox>
-        <Title>회원가입</Title>
+    <div style={styles.container}>
+      <div style={styles.signupBox}>
+        <h2 style={styles.title}>회원가입</h2>
         <form onSubmit={handleSubmit}>
           
-          <InputGroup>
-            <label>이메일</label>
-            <EmailRow>
-              <Input 
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>이메일</label>
+            <div style={styles.emailRow}>
+              <input 
                   type="email" 
                   name="email" 
                   value={formData.email} 
                   onChange={handleChange} 
                   placeholder="example@email.com" 
+                  style={styles.input}
               />
-              <CheckButton type="button" onClick={handleCheckEmail}>중복 확인</CheckButton>
-            </EmailRow>
-            {emailMessage && <Message isValid={isEmailValid}>{emailMessage}</Message>}
-          </InputGroup>
+              <button type="button" onClick={handleCheckEmail} style={styles.checkButton}>중복 확인</button>
+            </div>
+            {emailMessage && (
+                <span style={{...styles.message, color: isEmailValid ? '#28a745' : '#dc3545'}}>
+                    {emailMessage}
+                </span>
+            )}
+          </div>
 
-          <InputGroup>
-            <label>비밀번호</label>
-            <Input 
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>비밀번호</label>
+            <input 
                 type="password" 
                 name="password" 
                 value={formData.password} 
                 onChange={handleChange} 
                 placeholder="8자 이상, 영문/숫자/특수문자 포함" 
+                style={styles.input}
             />
             {/* ⭐ 비밀번호 메시지 표시 */}
-            {passwordMessage && <Message isValid={isPasswordValid}>{passwordMessage}</Message>}
-          </InputGroup>
+            {passwordMessage && (
+                <span style={{...styles.message, color: isPasswordValid ? '#28a745' : '#dc3545'}}>
+                    {passwordMessage}
+                </span>
+            )}
+          </div>
 
-          <InputGroup>
-            <label>비밀번호 확인</label>
-            <Input 
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>비밀번호 확인</label>
+            <input 
                 type="password" 
                 name="confirmPassword" 
                 value={formData.confirmPassword} 
                 onChange={handleChange} 
                 placeholder="비밀번호 확인" 
+                style={styles.input}
             />
-          </InputGroup>
+          </div>
 
-          <InputGroup>
-            <label>이름</label>
-            <Input type="text" name="name" value={formData.name} onChange={handleChange} placeholder="실명 입력" />
-          </InputGroup>
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>이름</label>
+            <input 
+                type="text" 
+                name="name" 
+                value={formData.name} 
+                onChange={handleChange} 
+                placeholder="실명 입력" 
+                style={styles.input}
+            />
+          </div>
 
-          <Button type="submit" disabled={!isEmailChecked}>가입하기</Button>
+          {/* ⭐ isSubmitting 상태일 때도 버튼 비활성화 및 텍스트 변경 */}
+          <button 
+            type="submit" 
+            disabled={isButtonDisabled}
+            style={isButtonDisabled ? { ...styles.button, ...styles.buttonDisabled } : styles.button}
+          >
+            {isSubmitting ? '처리 중...' : '가입하기'}
+          </button>
         </form>
 
-        <Footer>
+        <div style={styles.footer}>
             <div>
                 이미 계정이 있으신가요? 
-                <LinkText onClick={() => navigate('/')}>
+                <span onClick={() => navigate('/')} style={styles.linkText}>
                   로그인 하러가기
-                </LinkText>
+                </span>
             </div>
             <div>
                 비밀번호를 잊으셨나요?
-                <LinkText onClick={() => navigate('/find-pw')}>
+                <span onClick={() => navigate('/find-pw')} style={styles.linkText}>
                   비밀번호 찾기
-                </LinkText>
+                </span>
             </div>
-        </Footer>
+        </div>
 
-      </SignupBox>
-    </Container>
+      </div>
+    </div>
   );
 }
 export default Signup;
