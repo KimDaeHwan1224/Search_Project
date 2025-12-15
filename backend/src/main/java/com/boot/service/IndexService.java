@@ -3,64 +3,57 @@ package com.boot.service;
 import com.boot.dao.IndexDAO;
 import com.boot.dto.IndexDataDTO;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.w3c.dom.*;
+
 import javax.annotation.PostConstruct;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.ByteArrayInputStream;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.cache.annotation.Cacheable;
-// 🌟 CacheEvictService 주입
-import com.boot.service.CacheEvictService;
 
 @Service
 public class IndexService {
 
-    @Autowired private IndexDAO indexDAO;
-    @Autowired private RestTemplate restTemplate;
+    @Autowired
+    private IndexDAO indexDAO;
 
-    // 🌟 CacheEvictService 주입
-    @Autowired private CacheEvictService cacheEvictService;
+    @Autowired
+    private RestTemplate restTemplate;
 
-    private static final String SERVICE_KEY = "bd57b87ea9aa7ba4d2e87197051340c26321a4c486cef4b994b2269766664ccb";
-    private static final String API_ENDPOINT = "https://apis.data.go.kr/1160100/service/GetMarketIndexInfoService/getStockMarketIndex";
+    @Autowired
+    private CacheEvictService cacheEvictService;
+
+    // ✅ 환경변수 주입
+    @Value("${market.api.service-key}")
+    private String SERVICE_KEY;
+
+    private static final String API_ENDPOINT =
+            "https://apis.data.go.kr/1160100/service/GetMarketIndexInfoService/getStockMarketIndex";
+
     private static final int ROWS_PER_PAGE = 500;
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
+    private static final DateTimeFormatter DATE_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyyMMdd");
 
-    // Redis 캐시 상수 (KOSPI)
-    private static final String KOSPI_CACHE_NAME = "kospiHistoryCache";
-    private static final String KOSPI_CACHE_KEY = "'kospi_all'";
-
-    // Redis 캐시 상수 (KOSDAQ)
-    private static final String KOSDAQ_CACHE_NAME = "kosdaqHistoryCache";
-    private static final String KOSDAQ_CACHE_KEY = "'kosdaq_all'";
-
-    // KOSPI 상수
+    // ================= 상수 =================
     private static final String TARGET_INDEX = "코스피";
-    private static final String START_DATE = "19800104"; // KOSPI 시작일
-
-    // KOSDAQ 상수
     private static final String TARGET_INDEX_KOSDAQ = "코스닥";
-    private static final String START_DATE_KOSDAQ = "19960701"; // KOSDAQ 시작일
 
-    // ------------------- XML 파싱 유틸 -------------------
+    private static final String START_DATE = "19800104";
+    private static final String START_DATE_KOSDAQ = "19960701";
+
+    // ================= XML 파싱 =================
     private String getTagValue(String tag, Element element) {
         NodeList nodeList = element.getElementsByTagName(tag);
         if (nodeList.getLength() > 0) {
-            Node node = nodeList.item(0);
-            if (node.getNodeType() == Node.ELEMENT_NODE) {
-                return node.getTextContent();
-            }
+            return nodeList.item(0).getTextContent();
         }
         return null;
     }
@@ -68,264 +61,139 @@ public class IndexService {
     private List<IndexDataDTO> parseXml(String xmlData) {
         List<IndexDataDTO> resultList = new ArrayList<>();
         try {
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-            DocumentBuilder builder = factory.newDocumentBuilder();
+            DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
             Document doc = builder.parse(new ByteArrayInputStream(xmlData.getBytes("UTF-8")));
             doc.getDocumentElement().normalize();
 
-            NodeList totalCountNode = doc.getElementsByTagName("totalCount");
-            int totalCount = (totalCountNode.getLength() > 0)
-                    ? Integer.parseInt(totalCountNode.item(0).getTextContent())
-                    : 0;
+            int totalCount = Integer.parseInt(
+                    doc.getElementsByTagName("totalCount").item(0).getTextContent()
+            );
 
             NodeList itemList = doc.getElementsByTagName("item");
 
             for (int i = 0; i < itemList.getLength(); i++) {
-                Node itemNode = itemList.item(i);
-                if (itemNode.getNodeType() == Node.ELEMENT_NODE) {
-                    Element element = (Element) itemNode;
+                Element e = (Element) itemList.item(i);
+                IndexDataDTO dto = new IndexDataDTO();
 
-                    IndexDataDTO dto = new IndexDataDTO();
-                    dto.setIdxNm(getTagValue("idxNm", element));
-                    dto.setBasDt(getTagValue("basDt", element));
+                dto.setIdxNm(getTagValue("idxNm", e));
+                dto.setBasDt(getTagValue("basDt", e));
 
-                    try { dto.setClpr(Double.parseDouble(getTagValue("clpr", element))); } catch (Exception e) { dto.setClpr(null); }
-                    try { dto.setVs(Double.parseDouble(getTagValue("vs", element))); } catch (Exception e) { dto.setVs(null); }
-                    try { dto.setFltRt(Double.parseDouble(getTagValue("fltRt", element))); } catch (Exception e) { dto.setFltRt(null); }
-                    try { dto.setMkp(Double.parseDouble(getTagValue("mkp", element))); } catch (Exception e) { dto.setMkp(null); }
-                    try { dto.setHipr(Double.parseDouble(getTagValue("hipr", element))); } catch (Exception e) { dto.setHipr(null); }
-                    try { dto.setLopr(Double.parseDouble(getTagValue("lopr", element))); } catch (Exception e) { dto.setLopr(null); }
-                    try { dto.setTrqu(Long.parseLong(getTagValue("trqu", element))); } catch (Exception e) { dto.setTrqu(null); }
-                    try { dto.setTrPrc(Long.parseLong(getTagValue("trPrc", element))); } catch (Exception e) { dto.setTrPrc(null); }
-                    try { dto.setLstgMrktTotAmt(Long.parseLong(getTagValue("lstgMrktTotAmt", element))); } catch (Exception e) { dto.setLstgMrktTotAmt(null); }
+                try { dto.setClpr(Double.parseDouble(getTagValue("clpr", e))); } catch (Exception ignored) {}
+                try { dto.setVs(Double.parseDouble(getTagValue("vs", e))); } catch (Exception ignored) {}
+                try { dto.setFltRt(Double.parseDouble(getTagValue("fltRt", e))); } catch (Exception ignored) {}
+                try { dto.setMkp(Double.parseDouble(getTagValue("mkp", e))); } catch (Exception ignored) {}
+                try { dto.setHipr(Double.parseDouble(getTagValue("hipr", e))); } catch (Exception ignored) {}
+                try { dto.setLopr(Double.parseDouble(getTagValue("lopr", e))); } catch (Exception ignored) {}
+                try { dto.setTrqu(Long.parseLong(getTagValue("trqu", e))); } catch (Exception ignored) {}
+                try { dto.setTrPrc(Long.parseLong(getTagValue("trPrc", e))); } catch (Exception ignored) {}
+                try { dto.setLstgMrktTotAmt(Long.parseLong(getTagValue("lstgMrktTotAmt", e))); } catch (Exception ignored) {}
 
-                    if (i == 0) dto.setTotalCount(totalCount);
-
-                    resultList.add(dto);
-                }
+                if (i == 0) dto.setTotalCount(totalCount);
+                resultList.add(dto);
             }
         } catch (Exception e) {
-            System.err.println("XML 파싱 오류: " + e.getMessage());
+            e.printStackTrace();
         }
         return resultList;
     }
 
-    // ------------------- URL 빌더 -------------------
-
-    private String buildApiUrlForIndex(String idxNm, int pageNo, int numOfRows, String beginDt, String endDt) {
+    // ================= URL 생성 =================
+    private String buildApiUrl(String idxNm, int pageNo, int rows, String begin, String end) {
         return UriComponentsBuilder.fromUriString(API_ENDPOINT)
                 .queryParam("serviceKey", SERVICE_KEY)
                 .queryParam("resultType", "xml")
                 .queryParam("pageNo", pageNo)
-                .queryParam("numOfRows", numOfRows)
+                .queryParam("numOfRows", rows)
                 .queryParam("idxNm", idxNm)
-                .queryParam("beginBasDt", beginDt)
-                .queryParam("endBasDt", endDt)
+                .queryParam("beginBasDt", begin)
+                .queryParam("endBasDt", end)
                 .build(false)
                 .toUriString();
     }
 
-    // ------------------------------------------------------------
-    // 🌟 서버 시작 시 자동 실행: 누락분 업데이트 로직
-    // ------------------------------------------------------------
+    // ================= 서버 시작 자동 동기화 =================
     @PostConstruct
-    public void runInitialFullBackfillIfNeeded() {
-        System.out.println("AUTO INIT: KOSPI/KOSDAQ 데이터 유효성 검사 및 누락분 수집 시작");
-
-        // KOSPI 데이터 유효성 검사 및 업데이트
-        try {
-            updateMissingIndexData(
+    public void autoSync() {
+        updateMissingIndexData(
                 TARGET_INDEX,
                 START_DATE,
                 indexDAO.countIndexData(TARGET_INDEX),
                 indexDAO.selectLatestBasDt(TARGET_INDEX)
-            );
-        } catch (Exception e) {
-            System.err.println("AUTO INIT: KOSPI 초기 수집 중 오류: " + e.getMessage());
-            e.printStackTrace();
-        }
+        );
 
-        // KOSDAQ 데이터 유효성 검사 및 업데이트
-        try {
-            updateMissingIndexData(
+        updateMissingIndexData(
                 TARGET_INDEX_KOSDAQ,
                 START_DATE_KOSDAQ,
                 indexDAO.countKosdaqIndexData(TARGET_INDEX_KOSDAQ),
                 indexDAO.selectLatestKosdaqBasDt(TARGET_INDEX_KOSDAQ)
-            );
-        } catch (Exception e) {
-            System.err.println("AUTO INIT: KOSDAQ 초기 수집 중 오류: " + e.getMessage());
-            e.printStackTrace();
-        }
-        System.out.println("AUTO INIT: 누락분 업데이트 검사 완료");
+        );
     }
 
-    // ==========================================================
-    // KOSPI/KOSDAQ 수동 전체 수집 API
-    // ==========================================================
-
+    // ================= 핵심 수집 로직 =================
     @Transactional
-    public void initiateHistoricalDataCollection() {
-          updateMissingIndexData(
-             TARGET_INDEX,
-             START_DATE,
-             indexDAO.countIndexData(TARGET_INDEX),
-             indexDAO.selectLatestBasDt(TARGET_INDEX)
-           );
-    }
+    protected void updateMissingIndexData(String idxNm, String start, int count, String latest) {
+        String begin = start;
 
-    @Transactional
-    public void initiateKosdaqHistoricalDataCollection() {
-          updateMissingIndexData(
-             TARGET_INDEX_KOSDAQ,
-             START_DATE_KOSDAQ,
-             indexDAO.countKosdaqIndexData(TARGET_INDEX_KOSDAQ),
-             indexDAO.selectLatestKosdaqBasDt(TARGET_INDEX_KOSDAQ)
-           );
-    }
-
-
-    // ==========================================================
-    // 🌟 핵심 로직: DB의 가장 최근 날짜 이후의 누락분을 수집 (공통 사용)
-    // ==========================================================
-    @Transactional
-    protected void updateMissingIndexData(String idxNm, String initialStartDate, int dbCount, String latestDtInDB) {
-        String startDateToFetch = initialStartDate;
-
-        // DB에 데이터가 있다면, 가장 최근 날짜의 다음 날부터 시작
-        if (dbCount > 10 && latestDtInDB != null && !latestDtInDB.isEmpty()) {
-            try {
-                LocalDate latestDate = LocalDate.parse(latestDtInDB, DATE_FORMATTER);
-                startDateToFetch = latestDate.plusDays(1).format(DATE_FORMATTER);
-
-                System.out.println(idxNm + " 데이터 발견. 업데이트 시작 날짜: " + startDateToFetch);
-
-            } catch (Exception e) {
-                System.err.println(idxNm + " 최근 날짜 파싱 오류. 초기 시작일(" + initialStartDate + ")로 대체: " + e.getMessage());
-                startDateToFetch = initialStartDate;
-            }
-        } else {
-            System.out.println(idxNm + " DB 데이터 부족. 초기 수집 시작 날짜: " + initialStartDate);
+        if (count > 0 && latest != null) {
+            begin = LocalDate.parse(latest, DATE_FORMATTER)
+                    .plusDays(1)
+                    .format(DATE_FORMATTER);
         }
 
-        // 오늘 날짜
         String today = LocalDate.now().format(DATE_FORMATTER);
+        if (begin.compareTo(today) > 0) return;
 
-        // 이미 최신 날짜 이후라면 업데이트 불필요
-        if (startDateToFetch.compareTo(today) > 0) {
-            System.out.println(idxNm + " 최신 데이터입니다. 업데이트 불필요.");
-            return;
-        }
-
-        // 2. API 호출 (시작일 ~ 오늘)
-        collectDataRangeAndSave(idxNm, ROWS_PER_PAGE, startDateToFetch, today);
+        collectAndSave(idxNm, begin, today);
     }
 
-    // ==========================================================
-    // 공통 수집 및 저장 유틸리티 (캐시 무효화 로직 추가)
-    // ==========================================================
-
     @Transactional
-    protected void collectDataRangeAndSave(String idxNm, int rowsPerPage, String beginDt, String endDt) {
-        System.out.println("=== " + idxNm + " 데이터 수집 시작: " + beginDt + " ~ " + endDt + " ===");
-        int totalCount = 0;
-        int totalPages = 0;
+    protected void collectAndSave(String idxNm, String begin, String end) {
+        String firstUrl = buildApiUrl(idxNm, 1, 1, begin, end);
+        String xml = restTemplate.getForObject(firstUrl, String.class);
+        List<IndexDataDTO> init = parseXml(xml);
 
-        try {
-            // 1. 전체 건수를 가져오기 위한 초기 API 호출 (범위 기반)
-            String countUrl = buildApiUrlForIndex(idxNm, 1, 1, beginDt, endDt);
-            String xmlResponse = restTemplate.getForObject(countUrl, String.class);
-            List<IndexDataDTO> initialData = parseXml(xmlResponse);
+        if (init.isEmpty()) return;
 
-            if (initialData.isEmpty() || initialData.get(0).getTotalCount() == null) {
-                System.err.println("⚠ " + idxNm + " totalCount 조회 실패 또는 데이터 없음.");
-                return;
-            }
+        int total = init.get(0).getTotalCount();
+        int pages = (int) Math.ceil((double) total / ROWS_PER_PAGE);
 
-            totalCount = initialData.get(0).getTotalCount();
-            totalPages = (int) Math.ceil((double) totalCount / rowsPerPage);
+        for (int p = 1; p <= pages; p++) {
+            String url = buildApiUrl(idxNm, p, ROWS_PER_PAGE, begin, end);
+            List<IndexDataDTO> list =
+                    parseXml(restTemplate.getForObject(url, String.class));
 
-            if (totalCount == 0) {
-                System.out.println(idxNm + " 수집 기간 내 신규 데이터 없음.");
-                return;
-            }
-
-            // 2. 전체 페이지 순회 및 DB 저장
-            for (int pageNo = 1; pageNo <= totalPages; pageNo++) {
-                String url = buildApiUrlForIndex(idxNm, pageNo, rowsPerPage, beginDt, endDt);
-                String pageXml = restTemplate.getForObject(url, String.class);
-                List<IndexDataDTO> pageData = parseXml(pageXml);
-
-                for (IndexDataDTO dto : pageData) {
-                    if (idxNm.equals(dto.getIdxNm())) {
-                        if (idxNm.equals(TARGET_INDEX)) {
-                            indexDAO.insertOrUpdateIndexData(dto); // KOSPI 테이블 저장
-                        } else if (idxNm.equals(TARGET_INDEX_KOSDAQ)) {
-                            indexDAO.insertOrUpdateKosdaqIndexData(dto); // KOSDAQ 테이블 저장
-                        }
-                    }
+            for (IndexDataDTO dto : list) {
+                if (idxNm.equals(TARGET_INDEX)) {
+                    indexDAO.insertOrUpdateIndexData(dto);
+                } else {
+                    indexDAO.insertOrUpdateKosdaqIndexData(dto);
                 }
-                System.out.println(idxNm + " 페이지 " + pageNo + " 완료 (" + pageData.size() + "건)");
-                Thread.sleep(200); // API 부하 방지
             }
+        }
 
-            System.out.println("=== " + idxNm + " 데이터 수집 완료 (총 " + totalCount + "건) ===");
-
-            // ⭐️ DB 업데이트 성공 후, 캐시 무효화 (DEL 실행)
-            if (idxNm.equals(TARGET_INDEX)) {
-                cacheEvictService.evictKospiHistoryCache();
-                System.out.println("✅ KOSPI 히스토리 캐시 무효화 완료.");
-            } else if (idxNm.equals(TARGET_INDEX_KOSDAQ)) {
-                cacheEvictService.evictKosdaqHistoryCache();
-                System.out.println("✅ KOSDAQ 히스토리 캐시 무효화 완료.");
-            }
-
-        } catch (Exception e) {
-            System.err.println(idxNm + " 데이터 수집 중 치명적 오류: " + e.getMessage());
-            e.printStackTrace();
+        if (idxNm.equals(TARGET_INDEX)) {
+            cacheEvictService.evictKospiHistoryCache();
+        } else {
+            cacheEvictService.evictKosdaqHistoryCache();
         }
     }
 
-
-    // ==========================================================
-    // 캐시 및 데이터 조회 메서드 (Cacheable 유지)
-    // ==========================================================
-
-//    // KOSPI 조회
-//    @Cacheable(value = KOSPI_CACHE_NAME, key = KOSPI_CACHE_KEY)
-//    public List<IndexDataDTO> getKospiTimeSeriesData() {
-//        System.out.println("DEBUG: DB에서 KOSPI 히스토리 조회 중 (Cache Miss)...");
-//        return indexDAO.selectKospiHistory();
-//    }
-//
-//    // KOSDAQ 조회
-//    @Cacheable(value = KOSDAQ_CACHE_NAME, key = KOSDAQ_CACHE_KEY)
-//    public List<IndexDataDTO> getKosdaqTimeSeriesData() {
-//        System.out.println("DEBUG: DB에서 KOSDAQ 히스토리 조회 중 (Cache Miss)...");
-//        return indexDAO.selectKosdaqHistory();
-//    }
-
-    // ---------------- KOSPI 일일 저장 (수동 호출용) ----------------
+    // ================= 단일 날짜 수집 =================
     @Transactional
-    public void saveSingleDayData(String targetDate) {
-        collectDataRangeAndSave(TARGET_INDEX, 1, targetDate, targetDate);
+    public void saveSingleDayData(String date) {
+        collectAndSave(TARGET_INDEX, date, date);
     }
 
-    // ---------------- KOSDAQ 일별 저장 (수동 호출용) ----------------
     @Transactional
-    public void saveSingleKosdaqDayData(String targetDate) {
-        collectDataRangeAndSave(TARGET_INDEX_KOSDAQ, 1, targetDate, targetDate);
+    public void saveSingleKosdaqDayData(String date) {
+        collectAndSave(TARGET_INDEX_KOSDAQ, date, date);
     }
+
+    // ================= 최신 지수 조회 =================
     public Map<String, Object> getLatestIndexData() {
-        Map<String, Object> result = new HashMap<>();
-
-        IndexDataDTO kospi = indexDAO.selectLatestKospi();
-        IndexDataDTO kosdaq = indexDAO.selectLatestKosdaq();
-
-        result.put("kospi", kospi);
-        result.put("kosdaq", kosdaq);
-
-        return result;
+        Map<String, Object> map = new HashMap<>();
+        map.put("kospi", indexDAO.selectLatestKospi());
+        map.put("kosdaq", indexDAO.selectLatestKosdaq());
+        return map;
     }
-
 }

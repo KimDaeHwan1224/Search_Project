@@ -1,13 +1,30 @@
+import os
 import requests
 
+app_key = os.getenv("KIS_APP_KEY")
+secret_key = os.getenv("KIS_SECRET_KEY")
+
+# 🔍 환경변수 확인
+print("KIS_APP_KEY:", app_key)
+print("KIS_SECRET_KEY:", secret_key)
+
+if not app_key or not secret_key:
+    raise RuntimeError("환경변수가 설정되지 않았습니다.")
+
 url = "https://openapivts.koreainvestment.com:29443/oauth2/Approval"
+
 body = {
     "grant_type": "client_credentials",
-    "appkey": "PSlxrPo3nO2aqiNVzp8PohuPPIIMNm4uDUKR",
-    "secretkey": "gOxHUA7obiyKuBi3GFV49GR4bnuXD0aJO6fbhKW4Sqhp0yTuH5uerWvUl2sDRSRRKr7v9kvdzI431y2UCc7HYRUlD+TVGirQ+/FYQQ8r/CCugYbwbwzRHcgi8ptB7t7KN1ETu2PqsWTQT9bze/2nyl7jHJuaxvcIWSqnYufCMRvDwmn/6RY="
+    "appkey": app_key,
+    "secretkey": secret_key
 }
-headers = {"Content-Type": "application/json; utf-8"}
+
+headers = {
+    "Content-Type": "application/json; utf-8"
+}
 
 resp = requests.post(url, json=body, headers=headers)
+resp.raise_for_status()
+
 approval_key = resp.json().get("approval_key")
 print("approval_key:", approval_key)

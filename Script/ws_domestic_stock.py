@@ -159,7 +159,7 @@ def parse_and_forward_stock_payload(packed_str):
 # ------------------------
 async def single_socket_manager():
     """웹소켓 연결 및 구독 상태 관리 (비동기 코루틴)"""
-    g_approval_key = "18e7b1ee-18a3-468d-b2ed-53de0b6d510a"
+    g_approval_key = "f5531695-0706-4fb9-82ba-5705aac1c3fd"
     custtype = "P"
     reconnect_backoff = 1
 
