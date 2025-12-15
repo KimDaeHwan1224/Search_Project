@@ -1,6 +1,8 @@
 package com.boot.security;
 
 import io.jsonwebtoken.*;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
@@ -8,14 +10,18 @@ import java.util.Date;
 @Component
 public class JwtProvider {
 
-    // ★ 추후 환경변수로 빼는 게 좋음
-    private final String SECRET = "a89f48a6d90791b187c7f5e1e508a48d";
+    // JWT 키
+	@Value("${jwt.secret}")
+    private String secret;
 
-    // Access Token 만료시간: 1시간
-    private final Long ACCESS_EXPIRATION = 1000L * 60 * 60;
+    // Access Token 만료시간
+	@Value("${jwt.access-expiration}")
+    private long accessExpiration;
 
-    // Refresh Token 만료시간: 7일
-    private final Long REFRESH_EXPIRATION = 1000L * 60 * 60 * 24 * 7;
+
+    // Refresh Token 만료시간
+	@Value("${jwt.refresh-expiration}")
+    private long refreshExpiration;
 
     // Access Token 생성
     public String createAccessToken(String email, String role) {
@@ -25,8 +31,8 @@ public class JwtProvider {
                 .setSubject(email) // 토큰에 저장할 값 (여기서는 email)
                 .claim("role", role)
                 .setIssuedAt(now) // 발급 시간
-                .setExpiration(new Date(now.getTime() + ACCESS_EXPIRATION)) // 만료 시간
-                .signWith(SignatureAlgorithm.HS256, SECRET) // 암호화 방식
+                .setExpiration(new Date(now.getTime() + accessExpiration)) // 만료 시간
+                .signWith(SignatureAlgorithm.HS256, secret) // 암호화 방식
                 .compact();
     }
 
@@ -38,15 +44,15 @@ public class JwtProvider {
                 .setSubject(email)
                 .claim("role", role)
                 .setIssuedAt(now)
-                .setExpiration(new Date(now.getTime() + REFRESH_EXPIRATION))
-                .signWith(SignatureAlgorithm.HS256, SECRET)
+                .setExpiration(new Date(now.getTime() + refreshExpiration))
+                .signWith(SignatureAlgorithm.HS256, secret)
                 .compact();
     }
 
     // JWT → email 추출
     public String getEmailFromToken(String token) {
         return Jwts.parser()
-                .setSigningKey(SECRET)
+                .setSigningKey(secret)
                 .parseClaimsJws(token) // 토큰 검증 후 Claims 추출
                 .getBody()
                 .getSubject();
@@ -55,7 +61,7 @@ public class JwtProvider {
     // JWT → role 추출
     public String getRoleFromToken(String token) {
         return Jwts.parser()
-                .setSigningKey(SECRET)
+                .setSigningKey(secret)
                 .parseClaimsJws(token)
                 .getBody()
                 .get("role", String.class);
@@ -63,7 +69,7 @@ public class JwtProvider {
     // JWT 유효성 검사
     public boolean validateToken(String token) {
         try {
-            Jwts.parser().setSigningKey(SECRET).parseClaimsJws(token);
+            Jwts.parser().setSigningKey(secret).parseClaimsJws(token);
             return true;
         } catch (JwtException | IllegalArgumentException e) {
             return false;
