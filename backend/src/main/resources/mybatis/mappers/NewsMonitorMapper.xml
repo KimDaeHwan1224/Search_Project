@@ -9,4 +9,23 @@
     FROM STOCK_NEWS
   </select>
 
+  <!-- 총 뉴스 수 -->
+  <select id="countAllNews" resultType="int">
+    SELECT COUNT(*)
+    FROM STOCK_NEWS
+  </select>
+
+  <!-- 최근 1시간 뉴스 -->
+  <select id="countRecentNews" resultType="int">
+    SELECT COUNT(*)
+    FROM STOCK_NEWS
+    WHERE CREATED_AT >= SYSDATE - (1/24)
+  </select>
+
+  <!-- 감성 분석 미완료 -->
+  <select id="countUnanalyzedNews" resultType="int">
+    SELECT COUNT(*)
+    FROM STOCK_NEWS
+    WHERE SENTIMENT IS NULL
+  </select>
 </mapper>

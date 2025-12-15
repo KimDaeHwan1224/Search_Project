@@ -6,4 +6,8 @@ import java.util.Map;
 @Mapper
 public interface NewsMonitorDAO {
     Map<String, Object> getLastNewsCreatedAt();
+    
+    int countAllNews();
+    int countRecentNews();
+    int countUnanalyzedNews();
 }

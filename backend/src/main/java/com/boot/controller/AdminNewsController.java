@@ -2,6 +2,9 @@ package com.boot.controller;
 
 import com.boot.service.NewsMonitorService;
 import lombok.RequiredArgsConstructor;
+
+import java.util.Map;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,7 +16,7 @@ public class AdminNewsController {
     private final NewsMonitorService newsMonitorService;
 
     @GetMapping("/refresh-status")
-    public ResponseEntity<?> refreshStatus() {
-        return ResponseEntity.ok(newsMonitorService.getRefreshStatus());
+    public Map<String, Object> refreshStatus() {
+        return newsMonitorService.getRefreshStatus();
     }
 }
