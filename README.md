@@ -307,7 +307,6 @@ Windows Task Scheduler를 활용한 스케줄링 시스템을 구현했습니다
 
 </details>
 
----
 
 ### 🔗 내부 DB 연결 및 데이터 관리
 
